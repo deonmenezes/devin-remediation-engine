@@ -161,7 +161,16 @@ def to_html(rep):
   .actions{{margin:22px 0;display:flex;gap:10px;flex-wrap:wrap}}
   .actions a{{display:inline-flex;align-items:center;font-size:13px;font-weight:600;padding:8px 14px;border-radius:8px;border:1px solid #e5e7eb;background:#fff;color:#374151;text-decoration:none}}
   .actions a:hover{{background:#f9fafb}}
-  @media print{{body{{background:#fff}} .actions{{display:none}}}}
+  .callcard{{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:16px 18px;margin:0 0 8px}}
+  .callcard .ct{{font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;margin-bottom:4px}}
+  .callcard .cb{{font-size:12.5px;color:#6b7280;margin:0 0 12px}}
+  .callform{{display:flex;gap:8px;flex-wrap:wrap;align-items:center}}
+  .callform input{{font-family:inherit;font-size:13px;padding:8px 11px;border:1px solid #e5e7eb;border-radius:8px;width:210px}}
+  .callform button{{font-family:inherit;font-size:13px;font-weight:600;padding:8px 15px;border-radius:8px;border:1px solid #111827;background:#111827;color:#fff;cursor:pointer}}
+  .callform button:hover{{background:#000}} .callform button:disabled{{opacity:.5;cursor:default}}
+  .callmsg{{font-size:12.5px;margin-top:9px}} .callmsg.ok{{color:#15803d}} .callmsg.err{{color:#b91c1c}}
+  .callcard.off{{opacity:.6}}
+  @media print{{body{{background:#fff}} .actions,.callcard{{display:none}}}}
 </style></head><body><div class=sheet>
 <h1>Dependency Remediation Report</h1>
 <div class=meta>Repository <a href="{rep['repo_url']}" target=_blank>{rep['repo']}</a> · generated {rep['generated_at']} · mode <b>{rep['mode']}</b></div>
@@ -171,6 +180,39 @@ def to_html(rep):
   <a href="javascript:window.print()">Print / Save PDF</a>
   <a href="/dashboard">Back to dashboard</a>
 </div>
+<div class=callcard id=callcard>
+  <div class=ct><svg width=16 height=16 viewBox="0 0 24 24" fill="none" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.1-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.3 1.8.6 2.6a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.5-1.2a2 2 0 0 1 2.1-.5c.8.3 1.7.5 2.6.6a2 2 0 0 1 1.7 2z"/></svg>Prefer to listen? Get a call that reads this report aloud</div>
+  <p class=cb id=callblurb>We'll phone you and a voice agent will brief you on the remediation status — open CVEs, PRs opened, issues closed, and anything blocked.</p>
+  <div class=callform>
+    <input id=phone type=tel inputmode=tel placeholder="+1 415 555 0142" aria-label="Your phone number">
+    <button id=callbtn>Call me now</button>
+  </div>
+  <div class=callmsg id=callmsg></div>
+</div>
+<script>
+(function(){{
+  var card=document.getElementById('callcard'), btn=document.getElementById('callbtn'),
+      msg=document.getElementById('callmsg'), blurb=document.getElementById('callblurb');
+  fetch('/voice-status').then(function(r){{return r.json()}}).then(function(s){{
+    if(!s.configured){{ card.className='callcard off'; btn.disabled=true;
+      blurb.textContent='Calling isn\\'t configured yet — set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_FROM_NUMBER to enable a voice briefing of this report.'; }}
+  }});
+  btn.onclick=function(){{
+    var phone=document.getElementById('phone').value;
+    if(!phone){{ msg.className='callmsg err'; msg.textContent='Enter your phone number first.'; return; }}
+    btn.disabled=true; msg.className='callmsg'; msg.textContent='Placing call…';
+    fetch('/call-report',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{phone:phone}})}})
+      .then(function(r){{return r.json().then(function(d){{return {{ok:r.ok,d:d}}}})}})
+      .then(function(res){{
+        if(!res.ok) throw new Error(res.d.detail||'Could not place the call');
+        msg.className='callmsg ok';
+        msg.textContent='Calling '+res.d.to+' now — the voice agent will read out the report'+(res.d.used_claude?' (script written by Claude).':'.');
+      }})
+      .catch(function(e){{ msg.className='callmsg err'; msg.textContent=e.message; }})
+      .finally(function(){{ btn.disabled=false; }});
+  }};
+}})();
+</script>
 <h2>Executive summary</h2>
 <div class=kpis>{kpis}</div>
 <h2>Remediation runs</h2>

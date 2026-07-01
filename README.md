@@ -157,6 +157,18 @@ closed, ACU consumed, and success rate — with one-click export to Markdown
 pipeline), or print-to-PDF. It's the "would an engineering leader be able to
 tell this is working?" deliverable in one page.
 
+### Verbal briefing — get a phone call that reads the report aloud
+
+`/report` also has a **"Call me now"** control that places an outbound phone
+call and speaks the current status (open CVEs, PRs opened, issues closed, and
+anything blocked) — for a leader who'd rather listen than read. It's ported
+from a Twilio voice integration: the report is turned into a short spoken
+script (written by Claude when `ANTHROPIC_API_KEY` is set, otherwise a
+deterministic template), wrapped in inline TwiML, and handed to the Twilio
+Calls API — no public webhook needed, so it works from localhost. Set
+`TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_FROM_NUMBER` to enable
+it; `GET /voice-status` reports whether it's wired.
+
 ## Security notes
 
 - Secrets are read from environment variables only; nothing is hardcoded or

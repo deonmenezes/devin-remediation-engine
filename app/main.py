@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from . import config, store, report
+from . import config, store, report, voice
 from .orchestrator import Orchestrator
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -163,6 +163,38 @@ def report_md():
 def report_json():
     """Raw report data for piping into a real metrics/BI pipeline."""
     return report.build_report()
+
+
+@app.get("/voice-status")
+def voice_status():
+    """Whether the 'call me' feature is wired (Twilio creds present)."""
+    return {"configured": config.voice_configured(), "uses_claude": bool(config.ANTHROPIC_API_KEY)}
+
+
+@app.post("/call-report")
+async def call_report(request: Request):
+    """Place an outbound phone call that reads the current report aloud —
+    a verbal version of /report for someone who'd rather listen than read."""
+    if not config.voice_configured():
+        raise HTTPException(
+            status_code=503,
+            detail="Calling isn't configured. Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_FROM_NUMBER.",
+        )
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    to = voice.normalize_phone(body.get("phone", ""))
+    if not to:
+        raise HTTPException(status_code=400, detail="Enter a valid phone number, e.g. +14155550142.")
+
+    rep = report.build_report()
+    script, used_claude = voice.build_script(rep)
+    try:
+        result = voice.place_call(to, script)
+    except RuntimeError as e:
+        raise HTTPException(status_code=502, detail=str(e))
+    return {"to": to, "status": result.get("status"), "sid": result.get("sid"), "used_claude": used_claude}
 
 
 @app.get("/dashboard", response_class=HTMLResponse)

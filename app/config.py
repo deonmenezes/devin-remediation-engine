@@ -28,6 +28,19 @@ DB_PATH = os.environ.get("DB_PATH", "/data/runs.db")
 
 PORT = int(os.environ.get("PORT", "8000"))
 
+# Voice briefing ("call me and explain this report"). Ported from GridPath's
+# Twilio integration. All three Twilio vars are required for calling; the
+# Anthropic key is optional (falls back to a deterministic spoken template).
+TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID", "")
+TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN", "")
+TWILIO_FROM_NUMBER = os.environ.get("TWILIO_FROM_NUMBER", "")
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-5")
+
+
+def voice_configured():
+    return bool(TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN and TWILIO_FROM_NUMBER)
+
 # Reference-only metadata for the no-code Devin Automations configured directly
 # in the Devin dashboard for this org. There's no public API to list or poll
 # automation status (docs.devin.ai/product-guides/automations confirms this),
