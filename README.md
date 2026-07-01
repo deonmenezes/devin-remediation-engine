@@ -113,11 +113,12 @@ working button:
 
 | Button | Endpoint | What it does |
 |---|---|---|
-| **▶ Trigger dispatch** | `POST /trigger?limit=N` | Group the open issues and dispatch remediation for the top N packages |
-| **⚡ Simulate GitHub webhook** | `POST /simulate-webhook` | Fire a correctly HMAC-signed `issues.opened` event at `/webhook/github` — proves the event-driven path (signature check included) with no public tunnel |
-| **↻ Poll running sessions** | `POST /poll` | Refresh in-flight Devin sessions, pull back PR links + ACU |
-| **⟳ Refresh** | — | Re-fetch every table now (also auto-refreshes every 8s) |
-| **✕ Reset** | `POST /reset` | Clear the run ledger so you can demo again from a clean slate |
+| **Trigger dispatch** | `POST /trigger?limit=N` | Group the open issues and dispatch remediation for the top N packages |
+| **Simulate webhook** | `POST /simulate-webhook` | Fire a correctly HMAC-signed `issues.opened` event at `/webhook/github` — proves the event-driven path (signature check included) with no public tunnel |
+| **Poll sessions** | `POST /poll` | Refresh in-flight Devin sessions, pull back PR links + ACU |
+| **Refresh** | — | Re-fetch every table now (also auto-refreshes every 8s) |
+| **Generate report** | `GET /report` | Open a shareable executive report (also `/report.md` and `/report.json`) |
+| **Reset** | `POST /reset` | Clear the run ledger so you can demo again from a clean slate |
 
 The page also lists the raw 17 open issues (linked to GitHub, with severity),
 the package groups they collapse into, the live run ledger, and the four Devin
@@ -148,6 +149,13 @@ issues are old or new, only whether that package has already been dispatched.
 a live breakdown by status (`running` / `fixed` / `blocked` / `skipped_no_fix`
 / `error`), cumulative ACU spent, and per-package PR links. `/status` exposes
 the same data as JSON for scripting or piping into a real metrics stack.
+
+For a leadership-facing snapshot, **`/report`** renders a standalone executive
+summary — open CVE backlog, package groups, runs dispatched, PRs opened, issues
+closed, ACU consumed, and success rate — with one-click export to Markdown
+(`/report.md`, paste into Slack/email/a ticket), JSON (`/report.json`, for a BI
+pipeline), or print-to-PDF. It's the "would an engineering leader be able to
+tell this is working?" deliverable in one page.
 
 ## Security notes
 

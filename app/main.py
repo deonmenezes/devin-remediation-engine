@@ -5,17 +5,19 @@ import logging
 
 import requests
 from fastapi import FastAPI, Request, HTTPException, Query
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, PlainTextResponse, Response
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from . import config, store
+from . import config, store, report
 from .orchestrator import Orchestrator
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("main")
 
 app = FastAPI(title="Devin Dependency Remediation Engine")
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
 templates = Jinja2Templates(directory="app/templates")
 
 store.init_db()
@@ -138,6 +140,29 @@ def automations():
     for this org. Devin has no public API to list/poll automations, so this is
     static — it links out to the real thing rather than faking a live status."""
     return {"automations": config.AUTOMATIONS}
+
+
+@app.get("/report", response_class=HTMLResponse)
+def report_html():
+    """Shareable executive summary as a standalone, printable HTML page."""
+    return report.to_html(report.build_report())
+
+
+@app.get("/report.md", response_class=PlainTextResponse)
+def report_md():
+    """Same report as Markdown — paste straight into Slack, email, or a ticket."""
+    md = report.to_markdown(report.build_report())
+    return Response(
+        content=md,
+        media_type="text/markdown",
+        headers={"Content-Disposition": "attachment; filename=remediation-report.md"},
+    )
+
+
+@app.get("/report.json")
+def report_json():
+    """Raw report data for piping into a real metrics/BI pipeline."""
+    return report.build_report()
 
 
 @app.get("/dashboard", response_class=HTMLResponse)

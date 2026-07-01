@@ -3,287 +3,396 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Devin Dependency Remediation — Control Room</title>
+  <title>Remediation Engine · Control Room</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
-    :root { --bg:#0b0d12; --panel:#12141c; --panel2:#161922; --line:#242836; --muted:#8a8f98; --text:#e6e6e6; --accent:#2563eb; }
-    * { box-sizing: border-box; }
-    body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 28px 32px 60px; }
-    a { color: #7dd3fc; text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    code { background: #1a1d27; padding: 1px 5px; border-radius: 4px; font-size: .92em; }
-    h1 { font-size: 21px; margin: 0 0 4px; }
-    h2 { font-size: 13px; color: #c9cdd6; margin: 30px 0 12px; text-transform: uppercase; letter-spacing: .05em; }
-    .sub { color: var(--muted); font-size: 13px; margin-bottom: 22px; }
-    .mode { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: .05em; }
-    .mode-dry { background: #20242f; color: #a1a1aa; }
-    .mode-live { background: #3a1616; color: #f87171; }
+    :root{
+      --bg:#ffffff; --canvas:#f6f7f9; --panel:#ffffff;
+      --ink:#111827; --ink2:#374151; --muted:#6b7280; --muted2:#9ca3af;
+      --line:#e5e7eb; --line2:#eef0f3; --hover:#f9fafb; --head:#f9fafb;
+      --blue:#2563eb; --green:#16a34a; --amber:#d97706; --red:#dc2626; --orange:#ea580c;
+      --r:10px; --r2:8px;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0}
+    body{font-family:'Inter',-apple-system,system-ui,sans-serif; background:var(--canvas); color:var(--ink);
+      font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased}
+    a{color:var(--blue); text-decoration:none} a:hover{text-decoration:underline}
+    code,.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
+    code{background:#f3f4f6; padding:1.5px 6px; border-radius:5px; font-size:.86em; color:#1f2937; border:1px solid var(--line2)}
+
+    /* top bar */
+    .topbar{position:sticky; top:0; z-index:20; display:flex; align-items:center; gap:14px;
+      padding:0 26px; height:58px; background:var(--bg); border-bottom:1px solid var(--line)}
+    .brand{display:flex; align-items:center; gap:10px; font-weight:650; font-size:15px; color:var(--ink)}
+    .brand .logo{width:26px; height:26px; color:var(--ink)}
+    .brand .logo svg{width:26px; height:26px; display:block}
+    .brand .sub{color:var(--muted); font-weight:400; font-size:12.5px}
+    .spacer{flex:1}
+    .badge-mode{display:inline-flex; align-items:center; gap:7px; padding:5px 12px; border-radius:7px;
+      font-size:11.5px; font-weight:600; letter-spacing:.02em; border:1px solid var(--line)}
+    .badge-mode .dot{width:7px; height:7px; border-radius:50%}
+    .badge-mode.live{background:#fef2f2; color:#b91c1c; border-color:#fecaca}
+    .badge-mode.live .dot{background:var(--red)}
+    .badge-mode.dry{background:#f3f4f6; color:#4b5563}
+    .badge-mode.dry .dot{background:var(--muted2)}
+    .repo-link{display:inline-flex; align-items:center; gap:7px; color:var(--ink2); font-size:13px; font-weight:500}
+    .repo-link:hover{color:var(--ink); text-decoration:none}
+    .repo-link svg{width:16px; height:16px}
+
+    .wrap{max-width:1400px; margin:0 auto; padding:24px 26px 64px}
+    .pagehead{display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin:4px 0 20px; flex-wrap:wrap}
+    .pagehead h1{font-size:20px; font-weight:700; margin:0 0 6px; letter-spacing:-.01em}
+    .chips{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+    .chip{display:inline-flex; align-items:center; gap:6px; padding:5px 11px; border-radius:7px; font-size:12.5px;
+      color:var(--ink2); background:var(--panel); border:1px solid var(--line)}
+
+    .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--r)}
 
     /* pipeline */
-    .pipe { display:flex; align-items:stretch; gap:0; margin-bottom: 8px; flex-wrap: wrap; }
-    .stage { flex:1; min-width:180px; background: var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 16px; position:relative; }
-    .stage + .stage { margin-left: 26px; }
-    .stage + .stage::before { content:"▸"; position:absolute; left:-20px; top:50%; transform:translateY(-50%); color:#3a4050; font-size:16px; }
-    .stage .k { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
-    .stage .t { font-size:14px; font-weight:600; margin:4px 0 6px; }
-    .stage .d { font-size:12px; color:#aab0bb; line-height:1.45; }
-    .stage .who { display:inline-block; margin-top:8px; font-size:10px; padding:2px 7px; border-radius:10px; background:#1b2130; color:#93c5fd; }
-    .stage .who.devin { background:#20182f; color:#c4b5fd; }
+    .pipe{display:grid; grid-template-columns:repeat(4,1fr); margin-bottom:16px}
+    .step{padding:18px 20px; position:relative}
+    .step:not(:last-child){border-right:1px solid var(--line)}
+    .step .top{display:flex; align-items:center; gap:9px; margin-bottom:9px}
+    .step .num{width:24px; height:24px; border-radius:6px; display:grid; place-items:center; font-size:12px;
+      font-weight:700; color:#fff; background:var(--ink); flex:none}
+    .step .k{font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.07em; font-weight:600}
+    .step .t{font-size:14px; font-weight:600; margin:0 0 6px}
+    .step .d{font-size:12.5px; color:var(--muted); line-height:1.5}
+    .step .tag{display:inline-flex; align-items:center; gap:6px; margin-top:11px; font-size:10.5px; font-weight:600;
+      padding:3px 9px; border-radius:6px; letter-spacing:.02em; border:1px solid var(--line)}
+    .tag.engine{background:#eff6ff; color:#1d4ed8; border-color:#dbeafe}
+    .tag.devin{background:#f5f3ff; color:#6d28d9; border-color:#ede9fe}
+    .tag .dot{width:5px;height:5px;border-radius:50%;background:currentColor}
+    .caption{color:var(--muted); font-size:12px; margin:0 0 20px; padding-left:2px}
 
-    /* guide */
-    .guide { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px 20px; margin-bottom:20px; }
-    .guide ol { margin:0; padding-left:20px; }
-    .guide li { font-size:13px; color:#c3c8d2; margin:6px 0; line-height:1.5; }
-    .guide b { color:var(--text); }
+    /* quickstart */
+    .quick{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:22px}
+    .qstep{background:var(--panel); border:1px solid var(--line); border-radius:var(--r2); padding:13px 15px}
+    .qstep .qn{width:20px;height:20px;border-radius:5px;display:grid;place-items:center;font-size:11px;
+      font-weight:700; margin-bottom:8px; color:#fff; background:var(--ink)}
+    .qstep .qt{font-size:12.5px; font-weight:600; margin-bottom:3px}
+    .qstep .qd{font-size:11.5px; color:var(--muted); line-height:1.45}
 
-    /* controls */
-    .controls { display:flex; align-items:center; gap:10px; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin-bottom:10px; flex-wrap:wrap; }
-    .controls label { font-size:12px; color:var(--muted); }
-    .controls input[type=number] { width:56px; background:var(--bg); border:1px solid var(--line); color:var(--text); border-radius:6px; padding:6px 8px; }
-    .sep { width:1px; align-self:stretch; background:var(--line); margin:0 4px; }
-    button { background:var(--accent); color:#fff; border:none; border-radius:7px; padding:9px 15px; font-size:13px; font-weight:600; cursor:pointer; transition:background .12s, opacity .12s; }
-    button:hover { background:#1d4ed8; }
-    button.secondary { background:#232733; }
-    button.secondary:hover { background:#2c313f; }
-    button.danger { background:#3a1c1c; color:#fca5a5; }
-    button.danger:hover { background:#4a2222; }
-    button:disabled { opacity:.5; cursor:default; }
-    .hint { font-size:11px; color:#5b6070; margin:2px 0 0 2px; width:100%; }
-    #action-log { font-size:12.5px; color:#9aa0ab; margin-left:2px; min-height:16px; }
-    #action-log.busy { color:#facc15; }
-    #action-log.ok { color:#4ade80; }
-    #action-log.err { color:#f87171; }
+    /* toolbar */
+    .toolbar{display:flex; align-items:center; gap:9px; flex-wrap:wrap; padding:13px 16px; margin-bottom:20px}
+    .btn{display:inline-flex; align-items:center; gap:7px; border:1px solid transparent; cursor:pointer; font-family:inherit;
+      font-size:13px; font-weight:600; padding:8px 14px; border-radius:8px; transition:all .12s}
+    .btn svg{width:15px;height:15px}
+    .btn.primary{background:var(--ink); color:#fff; border-color:var(--ink)}
+    .btn.primary:hover{background:#000}
+    .btn.ghost{background:#fff; color:var(--ink2); border-color:var(--line)}
+    .btn.ghost:hover{background:var(--hover); border-color:#d1d5db}
+    .btn.danger{background:#fff; color:var(--red); border-color:#fca5a5}
+    .btn.danger:hover{background:#fef2f2}
+    .btn:disabled{opacity:.45; cursor:default}
+    .toolbar .lim{display:inline-flex; align-items:center; gap:7px; color:var(--muted); font-size:12.5px}
+    .toolbar input[type=number]{width:52px; background:#fff; border:1px solid var(--line); color:var(--ink);
+      border-radius:7px; padding:7px 9px; font-family:inherit; font-size:13px}
+    .vr{width:1px; align-self:stretch; background:var(--line); margin:2px 4px}
+    .logbox{display:inline-flex; align-items:center; gap:8px; margin-left:auto; font-size:12.5px; color:var(--muted);
+      background:var(--canvas); border:1px solid var(--line); border-radius:8px; padding:8px 13px; min-width:230px}
+    .logbox .ind{width:8px;height:8px;border-radius:50%;background:var(--muted2);flex:none}
+    .logbox.busy{color:#b45309} .logbox.busy .ind{background:var(--amber);animation:pulse 1s infinite}
+    .logbox.ok{color:#15803d} .logbox.ok .ind{background:var(--green)}
+    .logbox.err{color:#b91c1c} .logbox.err .ind{background:var(--red)}
+    @keyframes pulse{50%{opacity:.35}}
 
-    /* cards */
-    .cards { display:flex; gap:14px; margin:14px 0 4px; flex-wrap:wrap; }
-    .card { background:var(--panel2); border:1px solid var(--line); border-radius:9px; padding:13px 18px; min-width:104px; }
-    .card .n { font-size:22px; font-weight:600; }
-    .card .l { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+    /* metrics */
+    .metrics{display:grid; grid-template-columns:repeat(auto-fit,minmax(146px,1fr)); gap:12px; margin-bottom:26px}
+    .metric{background:var(--panel); border:1px solid var(--line); border-radius:var(--r); padding:15px 17px; position:relative; overflow:hidden}
+    .metric::before{content:""; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--muted2)}
+    .metric.m-fixed::before,.metric.m-merged::before{background:var(--green)}
+    .metric.m-running::before{background:var(--amber)}
+    .metric.m-blocked::before,.metric.m-error::before{background:var(--red)}
+    .metric.m-dry_run::before,.metric.m-skipped_no_fix::before{background:var(--muted2)}
+    .metric.m-total::before{background:var(--ink)}
+    .metric.m-acu::before{background:var(--blue)}
+    .metric .mn{font-size:25px; font-weight:700; letter-spacing:-.02em; line-height:1; color:var(--ink)}
+    .metric .ml{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; margin-top:7px; font-weight:600}
+
+    /* sections */
+    .section{margin-bottom:24px}
+    .shead{display:flex; align-items:center; gap:10px; margin:0 0 11px; padding:0 2px}
+    .shead h2{font-size:14px; font-weight:600; margin:0}
+    .shead .icn{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;background:#fff;border:1px solid var(--line)}
+    .shead .icn svg{width:15px;height:15px;color:var(--muted)}
+    .shead .cnt{font-size:11.5px; font-weight:600; color:var(--ink2); background:#f3f4f6; padding:2px 9px; border-radius:20px; border:1px solid var(--line)}
+    .shead .desc{color:var(--muted); font-size:12px; margin-left:auto; font-weight:400}
 
     /* tables */
-    table { width:100%; border-collapse:collapse; font-size:13px; }
-    th, td { text-align:left; padding:9px 10px; border-bottom:1px solid #1f2430; vertical-align:top; }
-    th { color:var(--muted); font-weight:500; text-transform:uppercase; font-size:11px; letter-spacing:.04em; }
-    tbody tr:hover { background:#12141c; }
-    .badge { padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600; white-space:nowrap; }
-    .b-fixed, .b-merged { background:#163a26; color:#4ade80; }
-    .b-running { background:#2a2410; color:#facc15; }
-    .b-blocked, .b-error { background:#3a1616; color:#f87171; }
-    .b-skipped_no_fix { background:#20242f; color:#93c5fd; }
-    .b-dry_run { background:#20242f; color:#a1a1aa; }
-    .b-pending { background:#1c2230; color:#7dd3fc; }
-    .b-done { background:#14201c; color:#4ade80; }
-    .sev-critical { background:#3a1616; color:#f87171; }
-    .sev-high { background:#3a2416; color:#fb923c; }
-    .sev-medium { background:#2a2410; color:#facc15; }
-    .sev-low { background:#14201c; color:#4ade80; }
-    .sev-unknown { background:#20242f; color:#a1a1aa; }
-    .empty { color:#5b6070; font-size:13px; padding:10px 2px; }
-    .note { font-size:12px; color:var(--muted); margin:-4px 0 10px; }
+    .tablewrap{overflow:hidden; border-radius:var(--r); border:1px solid var(--line); background:var(--panel)}
+    table{width:100%; border-collapse:collapse}
+    thead th{text-align:left; padding:10px 16px; font-size:10.5px; color:var(--muted); text-transform:uppercase;
+      letter-spacing:.05em; font-weight:600; background:var(--head); border-bottom:1px solid var(--line)}
+    tbody td{padding:11px 16px; font-size:13px; border-bottom:1px solid var(--line2); vertical-align:middle; color:var(--ink2)}
+    tbody tr:last-child td{border-bottom:none}
+    tbody tr:hover{background:var(--hover)}
+    .badge{display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; white-space:nowrap; border:1px solid transparent}
+    .badge .bd{width:6px;height:6px;border-radius:50%;background:currentColor}
+    .b-fixed,.b-merged{background:#ecfdf5; color:#15803d; border-color:#d1fae5}
+    .b-running{background:#fffbeb; color:#b45309; border-color:#fde68a}
+    .b-blocked,.b-error{background:#fef2f2; color:#b91c1c; border-color:#fecaca}
+    .b-skipped_no_fix{background:#eff6ff; color:#1d4ed8; border-color:#dbeafe}
+    .b-dry_run{background:#f3f4f6; color:#4b5563; border-color:var(--line)}
+    .b-pending{background:#eff6ff; color:#1d4ed8; border-color:#dbeafe}
+    .b-done{background:#ecfdf5; color:#15803d; border-color:#d1fae5}
+    .sev-critical{background:#fef2f2; color:#b91c1c; border-color:#fecaca}
+    .sev-high{background:#fff7ed; color:#c2410c; border-color:#fed7aa}
+    .sev-medium{background:#fffbeb; color:#b45309; border-color:#fde68a}
+    .sev-low{background:#ecfdf5; color:#15803d; border-color:#d1fae5}
+    .sev-unknown{background:#f3f4f6; color:#4b5563; border-color:var(--line)}
+    .issuelink{font-family:'JetBrains Mono',monospace; font-size:12px}
+    .empty{padding:24px 16px; text-align:center; color:var(--muted); font-size:13px}
+    .nofix{color:var(--red); font-weight:500}
+    .dimtag{color:var(--muted); font-size:11px; font-family:'JetBrains Mono',monospace}
+    .prlink{display:inline-flex;align-items:center;gap:5px;font-weight:600}
+    .autoname{font-weight:600; white-space:nowrap; color:var(--ink)}
+    .autotrig{font-size:11.5px; color:var(--muted)}
+    .autodesc{font-size:12px; color:var(--ink2); max-width:460px}
+    .footer{color:var(--muted2); font-size:12px; text-align:center; margin-top:28px}
+    @media(max-width:1050px){.pipe,.quick{grid-template-columns:repeat(2,1fr)} .step{border-right:none;border-bottom:1px solid var(--line)}}
   </style>
 </head>
 <body>
-  <h1>Devin Dependency Remediation — Control Room</h1>
-  <div class="sub">
-    <span id="mode-badge" class="mode {{ 'mode-live' if not dry_run else 'mode-dry' }}">{{ 'LIVE' if not dry_run else 'DRY RUN' }}</span>
-    · target repo <a href="{{ repo_url }}" target="_blank"><code>{{ repo }}</code></a>
-    · issues labeled <code>{{ issue_label }}</code>
-    · <a href="{{ repo_url }}/issues?q=is:issue+label:{{ issue_label }}" target="_blank">view issues on GitHub ↗</a>
-    · <a href="{{ repo_url }}/pulls" target="_blank">view PRs ↗</a>
+  <div class="topbar">
+    <div class="brand">
+      <span class="logo"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3.5 26 7v7.5c0 6.2-4 11.3-10 14-6-2.7-10-7.8-10-14V7l10-3.5Z"/><path d="M10.5 17.5 14 21l7.5-8"/></svg></span>
+      Remediation Engine <span class="sub">· dependency CVE autopilot</span>
+    </div>
+    <div class="spacer"></div>
+    <span id="mode-badge" class="badge-mode {{ 'live' if not dry_run else 'dry' }}"><span class="dot"></span>{{ 'LIVE' if not dry_run else 'DRY RUN' }}</span>
+    <a class="repo-link" href="{{ repo_url }}" target="_blank"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1-.7 0-.7 0-.7 1.2 0 1.9 1.2 1.9 1.2 1 1.8 2.8 1.3 3.5 1 0-.8.4-1.3.7-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2 0-.4-.5-1.6.2-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17 4.6 18 5 18 5c.7 1.6.2 2.8.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.5.3.9 1 .9 2.2v3.3c0 .3.1.7.8.6A12 12 0 0 0 12 .3"/></svg>{{ repo }}</a>
   </div>
 
-  <!-- Pipeline visualization -->
-  <div class="pipe">
-    <div class="stage">
-      <div class="k">1 · Detect</div>
-      <div class="t">Scan &amp; file issues</div>
-      <div class="d">Scheduled advisory scan finds vulnerable pins and opens one <code>{{ issue_label }}</code> issue per CVE.</div>
-      <span class="who devin">Devin automation</span>
+  <div class="wrap">
+    <div class="pagehead">
+      <div>
+        <h1>Control Room</h1>
+        <div class="chips">
+          <span class="chip">Issues labeled <code>{{ issue_label }}</code></span>
+          <span class="chip"><a href="{{ repo_url }}/issues?q=is:issue+label:{{ issue_label }}" target="_blank">Open issues ↗</a></span>
+          <span class="chip"><a href="{{ repo_url }}/pulls" target="_blank">Pull requests ↗</a></span>
+          <span class="chip">Max ACU / session <code>{{ max_acu }}</code></span>
+        </div>
+      </div>
     </div>
-    <div class="stage">
-      <div class="k">2 · Dispatch</div>
-      <div class="t">Group &amp; hand off</div>
-      <div class="d">This service groups issues by package (highest fix wins) and starts one Devin session per package.</div>
-      <span class="who">This engine</span>
+
+    <!-- pipeline -->
+    <div class="card pipe">
+      <div class="step">
+        <div class="top"><span class="num">1</span><span class="k">Detect</span></div>
+        <div class="t">Scan &amp; file issues</div>
+        <div class="d">A scheduled advisory scan finds vulnerable pins and opens one <code>{{ issue_label }}</code> issue per CVE. Detection only.</div>
+        <span class="tag devin"><span class="dot"></span>Devin automation</span>
+      </div>
+      <div class="step">
+        <div class="top"><span class="num">2</span><span class="k">Dispatch</span></div>
+        <div class="t">Group &amp; hand off</div>
+        <div class="d">This service groups issues by package (highest fix wins) and starts one Devin session per package.</div>
+        <span class="tag engine"><span class="dot"></span>This engine</span>
+      </div>
+      <div class="step">
+        <div class="top"><span class="num">3</span><span class="k">Fix</span></div>
+        <div class="t">Upgrade &amp; open PR</div>
+        <div class="d">Devin bumps the package, runs tests, and opens a PR that <code>Closes</code> every related issue — or comments the blocker.</div>
+        <span class="tag devin"><span class="dot"></span>Devin session</span>
+      </div>
+      <div class="step">
+        <div class="top"><span class="num">4</span><span class="k">Merge</span></div>
+        <div class="t">Review &amp; auto-merge</div>
+        <div class="d">A Devin automation checks the diff scope and CI, then approves and merges — only if it's safe.</div>
+        <span class="tag devin"><span class="dot"></span>Devin automation</span>
+      </div>
     </div>
-    <div class="stage">
-      <div class="k">3 · Fix</div>
-      <div class="t">Upgrade &amp; open PR</div>
-      <div class="d">Devin bumps the package, runs tests, opens a PR that <code>Closes</code> every related issue — or comments the blocker.</div>
-      <span class="who devin">Devin session</span>
+    <p class="caption">Stages 1 &amp; 4 are no-code Devin Automations (listed below). Stages 2–3 are this Dockerized service — drive them live with the buttons.</p>
+
+    <!-- quickstart -->
+    <div class="quick">
+      <div class="qstep"><div class="qn">1</div><div class="qt">Trigger dispatch</div><div class="qd">Reads the backlog, groups by package, starts remediation for the top N. Dry-run plans; live starts real sessions.</div></div>
+      <div class="qstep"><div class="qn">2</div><div class="qt">Simulate webhook</div><div class="qd">Fires a signed <code>issues.opened</code> event at the real webhook endpoint — proves the event path, signature and all.</div></div>
+      <div class="qstep"><div class="qn">3</div><div class="qt">Poll sessions</div><div class="qd">Refreshes in-flight Devin sessions and pulls back each PR link and the ACU it consumed.</div></div>
+      <div class="qstep"><div class="qn">4</div><div class="qt">Report / Reset</div><div class="qd">Generate a shareable executive report, or clear the ledger to run the whole demo again.</div></div>
     </div>
-    <div class="stage">
-      <div class="k">4 · Merge</div>
-      <div class="t">Review &amp; auto-merge</div>
-      <div class="d">A Devin automation checks scope + CI, then approves and merges only if it's safe.</div>
-      <span class="who devin">Devin automation</span>
+
+    <!-- toolbar -->
+    <div class="card toolbar">
+      <button class="btn primary" id="btn-trigger"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Trigger dispatch</button>
+      <span class="lim"><label for="limit-input">limit</label><input id="limit-input" type="number" min="1" max="20" value="{{ default_limit }}"></span>
+      <span class="vr"></span>
+      <button class="btn ghost" id="btn-webhook"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7z"/></svg>Simulate webhook</button>
+      <button class="btn ghost" id="btn-poll"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>Poll sessions</button>
+      <button class="btn ghost" id="btn-refresh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9 9 0 0 1 6.7 3M21 12a9 9 0 0 1-9 9 9 9 0 0 1-6.7-3"/><path d="M18 3v3h-3M6 21v-3h3"/></svg>Refresh</button>
+      <button class="btn ghost" id="btn-report"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/></svg>Generate report</button>
+      <span class="vr"></span>
+      <button class="btn danger" id="btn-reset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>Reset</button>
+      <span class="logbox" id="logbox"><span class="ind"></span><span id="action-log">Ready.</span></span>
     </div>
+
+    <div class="metrics" id="cards"></div>
+
+    <!-- runs -->
+    <div class="section">
+      <div class="shead">
+        <span class="icn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 14 3-3 3 3 5-6"/></svg></span>
+        <h2>Remediation Runs</h2>
+        <span class="desc">one row per dispatched package · PR &amp; ACU fill in as Devin works</span>
+      </div>
+      <div class="tablewrap">
+        <table id="runs-table">
+          <thead><tr><th>Package</th><th>Closes</th><th>Advisories</th><th>Status</th><th>Pull Request</th><th>ACU</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="empty" id="runs-empty">No runs yet — click <b>Trigger dispatch</b> or <b>Simulate webhook</b> to start.</div>
+      </div>
+    </div>
+
+    <!-- plan -->
+    <div class="section">
+      <div class="shead">
+        <span class="icn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg></span>
+        <h2>Package Groups</h2>
+        <span class="cnt" id="plan-count">0</span>
+        <span class="desc">17 issues collapse into these — each becomes one PR closing all its issues</span>
+      </div>
+      <div class="tablewrap">
+        <table id="plan-table">
+          <thead><tr><th>Package</th><th>Issues</th><th>Fix version</th><th>State</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- issues -->
+    <div class="section">
+      <div class="shead">
+        <span class="icn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg></span>
+        <h2>Open Issues</h2>
+        <span class="cnt"><span id="issue-count">0</span> open</span>
+        <span class="desc">the raw backlog filed by the scan · linked to GitHub</span>
+      </div>
+      <div class="tablewrap">
+        <table id="issues-table">
+          <thead><tr><th>#</th><th>Title</th><th>Package</th><th>Current → Fix</th><th>Advisory</th><th>Severity</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- automations -->
+    <div class="section">
+      <div class="shead">
+        <span class="icn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/><circle cx="12" cy="12" r="4"/></svg></span>
+        <h2>Devin Automations</h2>
+        <span class="cnt">{{ automations|length }} active</span>
+        <span class="desc">the no-code trigger &amp; merge stages · live in the Devin app</span>
+      </div>
+      <div class="tablewrap">
+        <table id="automations-table">
+          <thead><tr><th>Automation</th><th>Trigger</th><th>What it does</th><th></th></tr></thead>
+          <tbody>
+            {% for a in automations %}
+            <tr>
+              <td class="autoname">{{ a.name }}</td>
+              <td class="autotrig">{{ a.trigger }}</td>
+              <td class="autodesc">{{ a.purpose }}</td>
+              <td style="white-space:nowrap"><a class="prlink" href="{{ a.url }}" target="_blank">Open ↗</a></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="footer">Devin Dependency Remediation Engine · auto-refreshes every 8s · built for <code>{{ repo }}</code></div>
   </div>
-  <div class="note">Stages 1 and 4 run as no-code Devin Automations (bottom of page). Stages 2–3 are this Dockerized service — driven live by the buttons below.</div>
-
-  <!-- How to simulate -->
-  <div class="guide">
-    <b style="font-size:13px;">How to simulate the workflow (no terminal needed):</b>
-    <ol>
-      <li><b>Trigger dispatch</b> — reads the live issue backlog, groups by package, and starts remediation for the top N packages. In <b>DRY RUN</b> this plans without spending ACU or opening PRs; in <b>LIVE</b> it starts real Devin sessions.</li>
-      <li><b>Simulate GitHub webhook</b> — fires a signed <code>issues.opened</code> event at this service's own webhook endpoint, proving the event-driven path end-to-end (signature check included).</li>
-      <li><b>Poll running sessions</b> — refreshes the status of in-flight Devin sessions and pulls back any PR link + ACU spent.</li>
-      <li><b>Reset</b> — clears the run ledger so you can demo again from a clean slate.</li>
-    </ol>
-  </div>
-
-  <!-- Controls -->
-  <div class="controls">
-    <button id="btn-trigger" title="Group the open issues and dispatch remediation for the top N packages">▶ Trigger dispatch</button>
-    <label for="limit-input">limit</label>
-    <input id="limit-input" type="number" min="1" max="20" value="{{ default_limit }}">
-    <div class="sep"></div>
-    <button id="btn-webhook" class="secondary" title="Fire a signed synthetic GitHub issues.opened event at /webhook/github">⚡ Simulate GitHub webhook</button>
-    <button id="btn-poll" class="secondary" title="Refresh status of running Devin sessions">↻ Poll running sessions</button>
-    <button id="btn-refresh" class="secondary" title="Re-fetch all tables now">⟳ Refresh</button>
-    <div class="sep"></div>
-    <button id="btn-reset" class="danger" title="Clear the run ledger for a fresh demo">✕ Reset</button>
-    <div id="action-log">Ready.</div>
-  </div>
-
-  <!-- Summary cards -->
-  <div class="cards" id="cards"></div>
-
-  <!-- Runs -->
-  <h2>Remediation Runs</h2>
-  <table id="runs-table">
-    <thead><tr><th>Package</th><th>Closes issues</th><th>Advisories</th><th>Fix</th><th>Status</th><th>PR</th><th>ACU</th></tr></thead>
-    <tbody></tbody>
-  </table>
-  <div class="empty" id="runs-empty">No runs yet — click <b>▶ Trigger dispatch</b> or <b>⚡ Simulate GitHub webhook</b> above.</div>
-
-  <!-- Upcoming plan -->
-  <h2>Upcoming — package groups from the open backlog</h2>
-  <div class="note">17 issues collapse into these package groups. Each becomes one PR that closes all of its issues. Max ACU per session: <code>{{ max_acu }}</code>.</div>
-  <table id="plan-table">
-    <thead><tr><th>Package</th><th>Issues</th><th>Fix version</th><th>State</th></tr></thead>
-    <tbody></tbody>
-  </table>
-
-  <!-- Open issues -->
-  <h2>Open Issues (<span id="issue-count">0</span>) — the raw backlog</h2>
-  <table id="issues-table">
-    <thead><tr><th>#</th><th>Title</th><th>Package</th><th>Current → Fix</th><th>Advisory</th><th>Severity</th></tr></thead>
-    <tbody></tbody>
-  </table>
-
-  <!-- Automations -->
-  <h2>Devin Automations — the no-code trigger &amp; merge stages</h2>
-  <div class="note">Devin has no public API to poll automation status, so these link out to the live automations rather than faking an indicator.</div>
-  <table id="automations-table">
-    <thead><tr><th>Name</th><th>Trigger</th><th>What it does</th><th></th></tr></thead>
-    <tbody>
-      {% for a in automations %}
-      <tr>
-        <td style="white-space:nowrap;">{{ a.name }}</td>
-        <td style="font-size:12px;color:#aab0bb;">{{ a.trigger }}</td>
-        <td style="max-width:440px;font-size:12.5px;color:#c3c8d2;">{{ a.purpose }}</td>
-        <td style="white-space:nowrap;"><a href="{{ a.url }}" target="_blank">Open in Devin ↗</a></td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
 
 <script>
 const $ = (id) => document.getElementById(id);
 const REPO_URL = {{ repo_url | tojson }};
-function setLog(msg, cls) { const el = $('action-log'); el.textContent = msg; el.className = cls || ''; }
+function setLog(msg, cls){ $('action-log').textContent = msg; $('logbox').className = 'logbox ' + (cls||''); }
+const nice = (s) => s.replace(/_/g,' ');
 
-function renderCards(s) {
-  const parts = [`<div class="card"><div class="n">${s.total_runs}</div><div class="l">Total runs</div></div>`];
-  for (const [k, v] of Object.entries(s.by_status)) {
-    parts.push(`<div class="card"><div class="n">${v}</div><div class="l">${k.replace(/_/g,' ')}</div></div>`);
+function renderCards(s){
+  const parts = [`<div class="metric m-total"><div class="mn">${s.total_runs}</div><div class="ml">Total runs</div></div>`];
+  for(const [k,v] of Object.entries(s.by_status)){
+    parts.push(`<div class="metric m-${k}"><div class="mn">${v}</div><div class="ml">${nice(k)}</div></div>`);
   }
-  parts.push(`<div class="card"><div class="n">${s.total_acu_consumed.toFixed(1)}</div><div class="l">ACU consumed</div></div>`);
+  parts.push(`<div class="metric m-acu"><div class="mn">${s.total_acu_consumed.toFixed(1)}</div><div class="ml">ACU consumed</div></div>`);
   $('cards').innerHTML = parts.join('');
 }
+function issueLinks(nums){ return nums.map(n=>`<a class="issuelink" href="${REPO_URL}/issues/${n}" target="_blank">#${n}</a>`).join(' '); }
+function badge(status){ return `<span class="badge b-${status}"><span class="bd"></span>${nice(status)}</span>`; }
 
-function renderRuns(runs) {
-  const tbody = document.querySelector('#runs-table tbody');
+function renderRuns(runs){
   $('runs-empty').style.display = runs.length ? 'none' : 'block';
-  tbody.innerHTML = runs.map(r => `
+  document.querySelector('#runs-table tbody').innerHTML = runs.map(r=>`
     <tr>
-      <td><code>${r.package}</code></td>
-      <td>${r.issue_numbers.map(n => `<a href="${REPO_URL}/issues/${n}" target="_blank">#${n}</a>`).join(' ')}</td>
-      <td style="font-size:11.5px;color:#aab0bb;">${[...new Set(r.advisories)].join(', ')}</td>
-      <td>${r.dry_run ? '<span style="color:#5b6070;">(dry)</span>' : ''}</td>
-      <td><span class="badge b-${r.status}">${r.status.replace(/_/g,' ')}</span></td>
-      <td>${r.pr_url ? `<a href="${r.pr_url}" target="_blank">PR ↗</a>` : '—'}</td>
+      <td><code>${r.package}</code>${r.dry_run?' <span class="dimtag">dry</span>':''}</td>
+      <td>${issueLinks(r.issue_numbers)}</td>
+      <td class="dimtag">${[...new Set(r.advisories)].join(', ')}</td>
+      <td>${badge(r.status)}</td>
+      <td>${r.pr_url?`<a class="prlink" href="${r.pr_url}" target="_blank">PR ↗</a>`:'—'}</td>
       <td>${r.acu_consumed ?? '—'}</td>
     </tr>`).join('');
 }
-
-function renderPlan(plan) {
-  document.querySelector('#plan-table tbody').innerHTML = plan.groups.map(g => `
+function renderPlan(plan){
+  $('plan-count').textContent = plan.groups.length;
+  document.querySelector('#plan-table tbody').innerHTML = plan.groups.map(g=>`
     <tr>
       <td><code>${g.package}</code></td>
-      <td>${g.issues.map(n => `<a href="${REPO_URL}/issues/${n}" target="_blank">#${n}</a>`).join(' ')}</td>
-      <td>${g.fixed || '<span style="color:#f87171;">no fix published</span>'}</td>
-      <td>${g.already_dispatched ? '<span class="badge b-done">dispatched</span>' : '<span class="badge b-pending">pending</span>'}</td>
+      <td>${issueLinks(g.issues)}</td>
+      <td>${g.fixed?`<span class="mono">${g.fixed}</span>`:'<span class="nofix">no fix published</span>'}</td>
+      <td>${g.already_dispatched?'<span class="badge b-done"><span class="bd"></span>dispatched</span>':'<span class="badge b-pending"><span class="bd"></span>pending</span>'}</td>
     </tr>`).join('');
 }
-
-function renderIssues(plan) {
+function renderIssues(plan){
   $('issue-count').textContent = plan.issues.length;
-  document.querySelector('#issues-table tbody').innerHTML = plan.issues.map(i => `
+  document.querySelector('#issues-table tbody').innerHTML = plan.issues.map(i=>`
     <tr>
-      <td><a href="${i.html_url}" target="_blank">#${i.number}</a></td>
-      <td style="font-size:12.5px;">${i.title}</td>
+      <td><a class="issuelink" href="${i.html_url}" target="_blank">#${i.number}</a></td>
+      <td>${i.title}</td>
       <td><code>${i.package}</code></td>
-      <td>${i.current} → ${i.fixed || '<span style="color:#f87171;">no fix</span>'}</td>
-      <td style="font-size:11.5px;color:#aab0bb;">${i.advisory}</td>
-      <td><span class="badge sev-${i.severity}">${i.severity}</span></td>
+      <td class="mono" style="font-size:12px">${i.current} → ${i.fixed || '<span class="nofix">no fix</span>'}</td>
+      <td class="dimtag">${i.advisory}</td>
+      <td><span class="badge sev-${i.severity}"><span class="bd"></span>${i.severity}</span></td>
     </tr>`).join('');
 }
-
-async function refreshAll() {
-  const [s, p] = await Promise.all([fetch('/status').then(r=>r.json()), fetch('/plan').then(r=>r.json())]);
+async function refreshAll(){
+  const [s,p] = await Promise.all([fetch('/status').then(r=>r.json()), fetch('/plan').then(r=>r.json())]);
   renderCards(s.summary); renderRuns(s.runs); renderPlan(p); renderIssues(p);
 }
-
-async function act(btn, busyMsg, fn) {
-  document.querySelectorAll('button').forEach(b => b.disabled = true);
-  setLog(busyMsg, 'busy');
-  try {
-    const okMsg = await fn();
-    await refreshAll();
-    setLog(okMsg, 'ok');
-  } catch (e) {
-    setLog('Error: ' + e, 'err');
-  } finally {
-    document.querySelectorAll('button').forEach(b => b.disabled = false);
-  }
+async function act(busyMsg, fn){
+  document.querySelectorAll('.btn').forEach(b=>b.disabled=true);
+  setLog(busyMsg,'busy');
+  try{ const ok = await fn(); await refreshAll(); setLog(ok,'ok'); }
+  catch(e){ setLog('Error: '+e,'err'); }
+  finally{ document.querySelectorAll('.btn').forEach(b=>b.disabled=false); }
 }
-
-$('btn-trigger').onclick = () => act($('btn-trigger'), 'Dispatching…', async () => {
+$('btn-trigger').onclick = () => act('Dispatching…', async () => {
   const limit = $('limit-input').value || 3;
-  const d = await fetch(`/trigger?limit=${limit}`, {method:'POST'}).then(r=>r.json());
-  const names = d.dispatched.map(x => `${x.package} (${x.status.replace(/_/g,' ')})`);
-  return names.length ? `Dispatched: ${names.join(', ')}` : 'Nothing new to dispatch — all packages already handled.';
+  const d = await fetch(`/trigger?limit=${limit}`,{method:'POST'}).then(r=>r.json());
+  const names = d.dispatched.map(x=>`${x.package} (${nice(x.status)})`);
+  return names.length ? `Dispatched ${names.length}: ${names.join(', ')}` : 'Nothing new — all packages already handled.';
 });
-
-$('btn-webhook').onclick = () => act($('btn-webhook'), 'Firing signed webhook…', async () => {
-  const d = await fetch('/simulate-webhook', {method:'POST'}).then(r=>r.json());
+$('btn-webhook').onclick = () => act('Firing signed webhook…', async () => {
+  const d = await fetch('/simulate-webhook',{method:'POST'}).then(r=>r.json());
   const pkgs = (d.result && d.result.dispatched) || [];
-  return `Webhook ${d.webhook_status} · signature verified · dispatched: ${pkgs.length ? pkgs.join(', ') : 'nothing new'}`;
+  return `Webhook ${d.webhook_status} · signature verified · dispatched: ${pkgs.length?pkgs.join(', '):'nothing new'}`;
 });
-
-$('btn-poll').onclick = () => act($('btn-poll'), 'Polling sessions…', async () => {
-  const d = await fetch('/poll', {method:'POST'}).then(r=>r.json());
+$('btn-poll').onclick = () => act('Polling sessions…', async () => {
+  const d = await fetch('/poll',{method:'POST'}).then(r=>r.json());
   return `Polled — updated ${d.updated_run_ids.length} running session(s).`;
 });
-
-$('btn-refresh').onclick = () => act($('btn-refresh'), 'Refreshing…', async () => 'Up to date.');
-
-$('btn-reset').onclick = () => act($('btn-reset'), 'Resetting…', async () => {
-  const d = await fetch('/reset', {method:'POST'}).then(r=>r.json());
+$('btn-refresh').onclick = () => act('Refreshing…', async () => 'Up to date.');
+$('btn-report').onclick = () => { window.open('/report', '_blank'); setLog('Opened report in a new tab.', 'ok'); };
+$('btn-reset').onclick = () => act('Resetting…', async () => {
+  const d = await fetch('/reset',{method:'POST'}).then(r=>r.json());
   return `Reset — cleared ${d.cleared_runs} run(s).`;
 });
-
 refreshAll();
 setInterval(refreshAll, 8000);
 </script>
