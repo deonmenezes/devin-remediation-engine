@@ -1,8 +1,8 @@
-"""Voice briefing — "call me and explain this report out loud."
+"""Voice briefing - "call me and explain this report out loud."
 
 Ported from the GridPath Twilio integration: build a short spoken script from
 the live remediation report, wrap it in inline TwiML, and POST it to the Twilio
-Calls REST API. Self-contained — no public webhook, SDK, or media server
+Calls REST API. Self-contained - no public webhook, SDK, or media server
 needed, so it works straight from localhost. Claude writes a natural script when
 ANTHROPIC_API_KEY is set; otherwise a deterministic template keeps it working.
 """
@@ -15,12 +15,12 @@ from . import config
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
 TWILIO_VOICE = "Polly.Joanna-Neural"
 
-# Report-specific persona/prompt (this is the "different prompt" — GridPath's
+# Report-specific persona/prompt (this is the "different prompt" - GridPath's
 # Riley briefs on a map location; here the autopilot briefs on remediation status).
 BRIEF_SYSTEM = (
     "You are the voice of a security dependency-remediation autopilot, leaving a short "
     "spoken status briefing on a phone call for an engineering leader (a VP of Engineering). "
-    "Write ONLY the words to be spoken aloud — no markdown, no bullet points, no numbered "
+    "Write ONLY the words to be spoken aloud - no markdown, no bullet points, no numbered "
     "lists, no stage directions. Keep it to roughly 40 to 55 seconds when read aloud "
     "(about 100 to 140 words). Be warm, crisp, and executive. Open by saying this is the "
     "Devin remediation autopilot with a status update on the repository. Cover: how many "
@@ -50,7 +50,7 @@ def normalize_phone(raw):
 
 
 def build_facts(rep):
-    """Plain facts the brief must cover — also fed to Claude as grounding."""
+    """Plain facts the brief must cover - also fed to Claude as grounding."""
     k = rep["kpis"]
     sr = f"{k['success_rate_pct']} percent" if k["success_rate_pct"] is not None else "not applicable yet"
     lines = [
@@ -75,13 +75,13 @@ def build_facts(rep):
 
 
 def fallback_brief(rep):
-    """Deterministic spoken script — always available, no API key needed."""
+    """Deterministic spoken script - always available, no API key needed."""
     k = rep["kpis"]
     no_fix = [g["package"] for g in rep["groups"] if not g["has_fix"]]
     parts = [
         f"Hi, this is the Devin remediation autopilot with a status update on {rep['repo']}.",
         f"Right now there are {k['open_issues']} open C-V-E issues in the backlog, "
-        f"and they collapse into just {k['package_groups']} package upgrades — "
+        f"and they collapse into just {k['package_groups']} package upgrades - "
         f"{k['fixable_packages']} with a published fix.",
         f"So far, {k['runs_dispatched']} remediations have been dispatched, "
         f"opening {k['prs_opened']} pull requests and closing {k['issues_closed_by_prs']} issues, "

@@ -6,21 +6,21 @@ that does the actual upgrade-and-PR work. Built against
 [`deonmenezes/superset`](https://github.com/deonmenezes/superset), a fork of
 Apache Superset seeded with real CVEs found in its pinned dependencies.
 
-> 🎤 **Pitch deck** (What / How / Why / When): **[`pitch.pdf`](pitch.pdf)** — source [`pitch.html`](pitch.html).
+> 🎤 **Pitch deck** (What / How / Why / When): **[`pitch.pdf`](pitch.pdf)** - source [`pitch.html`](pitch.html).
 
 ## The problem
 
 A scheduled scanner (or Dependabot, or any SCA tool) files a GitHub issue
 every time it finds a vulnerable pinned dependency. On a repo of any size
 that turns into a steady drip of issues that someone has to triage, bump,
-test, and PR — one at a time, forever. This project is the "someone": it
+test, and PR - one at a time, forever. This project is the "someone": it
 watches for those issues, groups them by package (so a package with five
 open CVEs gets upgraded once, not five times), and hands each group to a
 Devin session with explicit instructions and guardrails. It reports back
 what happened so an engineering lead can see throughput and success rate
 without reading every PR.
 
-## Architecture — the full loop
+## Architecture - the full loop
 
 ```
   ┌─ STAGE 1 (Devin Automation) ────────────────────────────────┐
@@ -69,19 +69,19 @@ Trigger-dispatch button      ──┘    POST /trigger           │
 ```
 
 Stages 1 and 4 are no-code **Devin Automations** configured in the Devin app;
-stages 2–3 (and the deps-verify gate) are this Dockerized service. Together they
+stages 2-3 (and the deps-verify gate) are this Dockerized service. Together they
 close the loop from "CVE disclosed" to "fix merged" with a human only in the loop
 when something looks unsafe.
 
-> 📈 A rendered, color-coded flowchart of the full loop — including every guard
-> and the human hand-offs — is in **[`LOOP.md`](LOOP.md)** (Mermaid, renders on
+> 📈 A rendered, color-coded flowchart of the full loop - including every guard
+> and the human hand-offs - is in **[`LOOP.md`](LOOP.md)** (Mermaid, renders on
 > GitHub) with a PNG export at [`loop.png`](loop.png).
 
 ### The four automations, at a glance
 
 ![The 4 Devin Automations](four-automations.png)
 
-*(Simple one-slide version — source SVG: [`four-automations.svg`](four-automations.svg).)*
+*(Simple one-slide version - source SVG: [`four-automations.svg`](four-automations.svg).)*
 
 Key files:
 
@@ -91,21 +91,21 @@ Key files:
 | `app/orchestrator.py` | Issue parsing, package grouping, prompt construction, dispatch + poll logic |
 | `app/devin_client.py` | Thin wrapper around the Devin v3 sessions API |
 | `app/github_client.py` | Thin wrapper around the GitHub REST API (list issues, comment) |
-| `app/store.py` | SQLite-backed ledger of every dispatch — the data behind `/status` and `/dashboard` |
+| `app/store.py` | SQLite-backed ledger of every dispatch - the data behind `/status` and `/dashboard` |
 | `scripts/simulate_webhook.py` | Fires a correctly-signed synthetic GitHub webhook at a local instance, so the event path can be demoed without a public tunnel |
 
-## The merge gate — CI on a billing-blocked private fork
+## The merge gate - CI on a billing-blocked private fork
 
 The fork **must stay private**: Devin's GitHub automations only fire on private
-repos ([Devin docs](https://docs.devin.ai/product-guides/automations) — *"GitHub
+repos ([Devin docs](https://docs.devin.ai/product-guides/automations) - *"GitHub
 automations only work with private repositories for security reasons"*). But on a
 private repo GitHub Actions consumes paid minutes, and this account's Actions
-billing is blocked — so **every** job in upstream Superset's 84-check matrix fails
+billing is blocked - so **every** job in upstream Superset's 84-check matrix fails
 before it even starts. That's the real reason a human previously had to
 `--admin`-merge each fix over a wall of red.
 
 Rather than pay for CI or expose the repo, **the engine is the CI.** A scheduler
-job (`reconcile_checks`, every 30s — also fired by the `pull_request` webhook)
+job (`reconcile_checks`, every 30s - also fired by the `pull_request` webhook)
 runs `deps-verify` over each open dependency PR:
 
 1. Fetch the changed `requirements/*.txt` at the PR head.
@@ -115,10 +115,10 @@ runs `deps-verify` over each open dependency PR:
 5. If green and the PR is a draft, flip it to ready-for-review (drafts can't merge).
 
 `master` branch protection **requires only the `deps-verify` context** (bound to
-`app_id: -1` so the engine's status — not GitHub Actions — satisfies it). This is
+`app_id: -1` so the engine's status - not GitHub Actions - satisfies it). This is
 the exact mechanism external CI (CircleCI, Jenkins, Buildkite) uses: a first-class
 commit status gating merges. The upstream cloud-dependent workflows are disabled
-on the fork, so a dependency PR shows one meaningful check — green `deps-verify` —
+on the fork, so a dependency PR shows one meaningful check - green `deps-verify` -
 and the Stage-4 Devin automation merges it with no human. See
 [`DEVIN_AUTOMATIONS.md`](DEVIN_AUTOMATIONS.md) for the automation prompts.
 
@@ -147,8 +147,8 @@ them, and asks Devin to close every issue in that group from one PR.
 
 ## Why a dry-run mode?
 
-`DRY_RUN=true` (the default) runs the full pipeline — fetch issues, parse,
-group, decide what *would* be dispatched — without calling the Devin API,
+`DRY_RUN=true` (the default) runs the full pipeline - fetch issues, parse,
+group, decide what *would* be dispatched - without calling the Devin API,
 opening a session, or commenting on GitHub. That's what `/plan` always shows
 you, and what `/trigger` does when dry-run is on. Flip `DRY_RUN=false` only
 after you've reviewed the plan, since live dispatch spends real ACU and opens
@@ -158,7 +158,7 @@ real pull requests.
 
 ```bash
 cp .env.example .env
-# fill in DEVIN_API_KEY, DEVIN_ORG_ID, GITHUB_TOKEN — never commit this file
+# fill in DEVIN_API_KEY, DEVIN_ORG_ID, GITHUB_TOKEN - never commit this file
 
 docker compose up --build
 ```
@@ -166,7 +166,7 @@ docker compose up --build
 The service comes up on `http://localhost:8000` and redirects `/` straight to
 the dashboard.
 
-### The dashboard is the whole demo — no terminal required
+### The dashboard is the whole demo - no terminal required
 
 Open **`http://localhost:8000/dashboard`**. It's a self-service "control room"
 with a pipeline diagram, a step-by-step guide, and every action wired to a
@@ -175,9 +175,9 @@ working button:
 | Button | Endpoint | What it does |
 |---|---|---|
 | **Trigger dispatch** | `POST /trigger?limit=N` | Group the open issues and dispatch remediation for the top N packages |
-| **Simulate webhook** | `POST /simulate-webhook` | Fire a correctly HMAC-signed `issues.opened` event at `/webhook/github` — proves the event-driven path (signature check included) with no public tunnel |
+| **Simulate webhook** | `POST /simulate-webhook` | Fire a correctly HMAC-signed `issues.opened` event at `/webhook/github` - proves the event-driven path (signature check included) with no public tunnel |
 | **Poll sessions** | `POST /poll` | Refresh in-flight Devin sessions, pull back PR links + ACU |
-| **Refresh** | — | Re-fetch every table now (also auto-refreshes every 8s) |
+| **Refresh** | - | Re-fetch every table now (also auto-refreshes every 8s) |
 | **Generate report** | `GET /report` | Open a shareable executive report (also `/report.md` and `/report.json`) |
 | **Reset** | `POST /reset` | Clear the run ledger so you can demo again from a clean slate |
 
@@ -201,7 +201,7 @@ or a deployed instance) and set the same `GITHUB_WEBHOOK_SECRET` on both sides.
 The 17 seed issues in `deonmenezes/superset` were filed by a scheduled scan
 *before* this service's webhook existed, so nothing will retroactively fire
 for them. `POST /trigger` (or the periodic re-scan if `RESCAN_INTERVAL_SECONDS`
-is set) is what picks up that backlog — it doesn't care whether a package's
+is set) is what picks up that backlog - it doesn't care whether a package's
 issues are old or new, only whether that package has already been dispatched.
 
 ## Observability
@@ -212,21 +212,21 @@ a live breakdown by status (`running` / `fixed` / `blocked` / `skipped_no_fix`
 the same data as JSON for scripting or piping into a real metrics stack.
 
 For a leadership-facing snapshot, **`/report`** renders a standalone executive
-summary — open CVE backlog, package groups, runs dispatched, PRs opened, issues
-closed, ACU consumed, and success rate — with one-click export to Markdown
+summary - open CVE backlog, package groups, runs dispatched, PRs opened, issues
+closed, ACU consumed, and success rate - with one-click export to Markdown
 (`/report.md`, paste into Slack/email/a ticket), JSON (`/report.json`, for a BI
 pipeline), or print-to-PDF. It's the "would an engineering leader be able to
 tell this is working?" deliverable in one page.
 
-### Verbal briefing — get a phone call that reads the report aloud
+### Verbal briefing - get a phone call that reads the report aloud
 
 `/report` also has a **"Call me now"** control that places an outbound phone
 call and speaks the current status (open CVEs, PRs opened, issues closed, and
-anything blocked) — for a leader who'd rather listen than read. It's ported
+anything blocked) - for a leader who'd rather listen than read. It's ported
 from a Twilio voice integration: the report is turned into a short spoken
 script (written by Claude when `ANTHROPIC_API_KEY` is set, otherwise a
 deterministic template), wrapped in inline TwiML, and handed to the Twilio
-Calls API — no public webhook needed, so it works from localhost. Set
+Calls API - no public webhook needed, so it works from localhost. Set
 `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_FROM_NUMBER` to enable
 it; `GET /voice-status` reports whether it's wired.
 
@@ -239,7 +239,7 @@ it; `GET /voice-status` reports whether it's wired.
 - Devin sessions are capped per-session via `MAX_ACU_PER_SESSION`, and dispatch
   is capped per-trigger via `DISPATCH_LIMIT_PER_RUN`, so a single event can't
   fan out into unbounded spend.
-- A package with no published fix never gets force-pushed into a broken PR —
+- A package with no published fix never gets force-pushed into a broken PR -
   the agent is explicitly instructed to comment the blocker and stop instead.
 - A major-version upgrade is never auto-remediated or auto-merged; it's held for
   a human (see "The major-version guard"). Merges are gated by branch protection
@@ -252,7 +252,7 @@ it; `GET /voice-status` reports whether it's wired.
   to npm/cargo/go.mod with a different issue-title parser per ecosystem.
 - Notify a Slack channel on `fixed`/`blocked` instead of (or in addition to)
   GitHub comments.
-- ~~Auto-merge on green CI + an approving review~~ **(done)** — the `deps-verify`
+- ~~Auto-merge on green CI + an approving review~~ **(done)** - the `deps-verify`
   gate + branch protection + the Stage-4 Devin automation now merge green,
   in-scope, non-major PRs with no human. See "The merge gate" above.
 - Replace the SQLite ledger with Postgres and the dashboard with a real

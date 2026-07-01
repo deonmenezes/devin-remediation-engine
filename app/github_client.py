@@ -53,7 +53,7 @@ class GitHubClient:
     # GitHub Actions can't run on this private fork (the account's Actions billing
     # is blocked), so the engine acts as external CI: it validates a dependency
     # PR and reports the result as a commit status. This is the same mechanism
-    # CircleCI / Jenkins / Buildkite use — a first-class GitHub merge gate.
+    # CircleCI / Jenkins / Buildkite use - a first-class GitHub merge gate.
 
     def list_open_pulls(self):
         pulls, page = [], 1

@@ -73,9 +73,9 @@ async def github_webhook(request: Request):
     event = request.headers.get("X-GitHub-Event", "")
     payload = await request.json()
 
-    # A new/opened PR (e.g. one Devin just opened) — run the deps-verify gate on it.
+    # A new/opened PR (e.g. one Devin just opened) - run the deps-verify gate on it.
     if event == "pull_request" and payload.get("action") in ("opened", "reopened", "synchronize", "ready_for_review"):
-        log.info("webhook received event=pull_request action=%s — reconciling checks", payload.get("action"))
+        log.info("webhook received event=pull_request action=%s - reconciling checks", payload.get("action"))
         reconciled = orchestrator.reconcile_checks()
         return {"event": event, "reconciled": reconciled}
 
@@ -84,14 +84,14 @@ async def github_webhook(request: Request):
     if not interesting:
         return {"skipped": True, "event": event, "action": payload.get("action")}
 
-    log.info("webhook received event=%s action=%s — dispatching", event, payload.get("action"))
+    log.info("webhook received event=%s action=%s - dispatching", event, payload.get("action"))
     dispatched = orchestrator.dispatch()
     return {"event": event, "dispatched": [d["package"] for d in dispatched]}
 
 
 @app.post("/trigger")
 def manual_trigger(limit: int = Query(default=None)):
-    """Manually fire a dispatch pass — used for demos and for working through
+    """Manually fire a dispatch pass - used for demos and for working through
     the existing issue backlog that predates any webhook wiring."""
     dispatched = orchestrator.dispatch(limit=limit)
     return {"dispatched": [{"package": d["package"], "status": d["status"]} for d in dispatched]}
@@ -107,7 +107,7 @@ def plan():
 def simulate_webhook():
     """Fire a correctly-signed synthetic GitHub `issues.opened` event at our own
     /webhook/github endpoint. This lets a reviewer demo the real event-driven
-    path from a dashboard button — signature verification and all — without
+    path from a dashboard button - signature verification and all - without
     needing a public tunnel or a real GitHub webhook."""
     payload = {
         "action": "opened",
@@ -160,7 +160,7 @@ def status():
 def automations():
     """Reference metadata for the Devin Automations configured in the dashboard
     for this org. Devin has no public API to list/poll automations, so this is
-    static — it links out to the real thing rather than faking a live status."""
+    static - it links out to the real thing rather than faking a live status."""
     return {"automations": config.AUTOMATIONS}
 
 
@@ -172,7 +172,7 @@ def report_html():
 
 @app.get("/report.md", response_class=PlainTextResponse)
 def report_md():
-    """Same report as Markdown — paste straight into Slack, email, or a ticket."""
+    """Same report as Markdown - paste straight into Slack, email, or a ticket."""
     md = report.to_markdown(report.build_report())
     return Response(
         content=md,
@@ -195,7 +195,7 @@ def voice_status():
 
 @app.post("/call-report")
 async def call_report(request: Request):
-    """Place an outbound phone call that reads the current report aloud —
+    """Place an outbound phone call that reads the current report aloud -
     a verbal version of /report for someone who'd rather listen than read."""
     if not config.voice_configured():
         raise HTTPException(

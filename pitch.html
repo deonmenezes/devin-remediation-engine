@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Autonomous Dependency Security — Devin Take-Home</title>
+<title>Autonomous Dependency Security - Devin Take-Home</title>
 <style>
   :root{
     --ink:#0f172a; --slate:#334155; --muted:#64748b; --line:#e2e8f0;
@@ -89,7 +89,7 @@
   <section class="slide title-slide">
     <span class="kicker">Devin Take-Home · Cognition</span>
     <h1>Autonomous Dependency Security</h1>
-    <p class="sub">Turning never-ending CVE toil into a hands-free remediation loop — with Devin doing the work.</p>
+    <p class="sub">Turning never-ending CVE toil into a hands-free remediation loop - with Devin doing the work.</p>
     <div class="byline">Presented by <b>Deon Menezes</b> &nbsp;·&nbsp; live on a fork of Apache Superset</div>
   </section>
 
@@ -99,12 +99,12 @@
     <span class="kicker">What · The problem</span>
     <h2>Dependency security is endless toil for engineering teams</h2>
     <ul>
-      <li>Scanners file a steady <b>drip of CVE issues</b> — every week, forever</li>
+      <li>Scanners file a steady <b>drip of CVE issues</b> - every week, forever</li>
       <li>Each one is the same grind: <b>triage → bump → fix conflicts → test → PR → merge</b></li>
       <li>Low-value, high-interrupt work that pulls <b>senior engineers off the roadmap</b></li>
       <li>Skip it and <b>security debt and audit risk compound</b></li>
     </ul>
-    <div class="callout">Important, tedious, and never actually done — the perfect job to automate.</div>
+    <div class="callout">Important, tedious, and never actually done - the perfect job to automate.</div>
     <div class="foot"><span class="brand">Autonomous Dependency Security</span><span>2</span></div>
   </section>
 
@@ -124,7 +124,7 @@
     <h2>The loop in action</h2>
     <ul>
       <li>A scan files a <b>devin-remediate</b> issue for each new CVE</li>
-      <li>Devin opens a scoped PR — <b>“security: upgrade X → Y”, “Closes #N”</b></li>
+      <li>Devin opens a scoped PR - <b>“security: upgrade X → Y”, “Closes #N”</b></li>
       <li>The engine posts the <b>deps-verify</b> check; branch protection requires it</li>
       <li>Devin auto-reviews scope + green check, then <b>squash-merges</b> and the issue closes</li>
       <li>A live <b>control room</b> shows every run, PR link, and ACU spent</li>
@@ -140,9 +140,9 @@
     <div class="row">
       <div class="txt">
         <ul>
-          <li><b>Group by package</b> — one PR per package, not one per CVE</li>
+          <li><b>Group by package</b> - one PR per package, not one per CVE</li>
           <li><b>Guardrails</b>: no published fix, or a <b>major-version bump</b> → held for a human</li>
-          <li><b>The engine is the CI</b> — posts a first-class <b>deps-verify</b> status (private fork, Actions off)</li>
+          <li><b>The engine is the CI</b> - posts a first-class <b>deps-verify</b> status (private fork, Actions off)</li>
           <li><b>Dry-run, a run ledger, and a report</b> so a lead can see it working</li>
         </ul>
       </div>
@@ -155,7 +155,7 @@
   <section class="slide">
     <span class="accent"></span>
     <span class="kicker">How · The full loop</span>
-    <h2 style="font-size:32px; margin-top:14px; margin-bottom:2px">Every path — including the guardrails</h2>
+    <h2 style="font-size:32px; margin-top:14px; margin-bottom:2px">Every path - including the guardrails</h2>
     <div class="full-fig"><img src="loop.png" alt="Full remediation loop flowchart" style="max-height:548px; max-width:88%"></div>
     <div class="foot"><span class="brand">Green = automated&nbsp; ·&nbsp; amber = decision&nbsp; ·&nbsp; red = human hand-off</span><span>6</span></div>
   </section>
@@ -167,8 +167,8 @@
     <h2>This needs an agent, not a script</h2>
     <ul>
       <li class="g">A script bumps a pin. <b>Devin reads the repo</b>, regenerates lockfiles, resolves conflicts, fixes compatibility, runs tests, and writes the PR</li>
-      <li class="g">Handles the <b>long tail</b> — transitive pins and code changes — that break naive bots</li>
-      <li class="g">Native <b>automations trigger on GitHub events</b> — no glue infrastructure to run</li>
+      <li class="g">Handles the <b>long tail</b> - transitive pins and code changes - that break naive bots</li>
+      <li class="g">Native <b>automations trigger on GitHub events</b> - no glue infrastructure to run</li>
       <li class="g"><b>Judgment</b>: it recognizes when a fix isn’t safe and stops</li>
     </ul>
     <div class="callout" style="border-left-color:var(--green)">The value isn’t the version bump. It’s everything around the bump.</div>
@@ -181,9 +181,9 @@
     <span class="kicker g">Proof · It works, end to end</span>
     <h2 style="margin-bottom:0">Live on a real repository</h2>
     <div class="stats">
-      <div class="stat"><div class="n g">15 / 17</div><div class="l">CVEs remediated and merged — hands-free</div></div>
+      <div class="stat"><div class="n g">15 / 17</div><div class="l">CVEs remediated and merged - hands-free</div></div>
       <div class="stat"><div class="n a">2 held</div><div class="l">correctly: flask (major migration) &amp; paramiko (no fix)</div></div>
-      <div class="stat"><div class="n">0</div><div class="l">un-verified merges — every PR gated by deps-verify</div></div>
+      <div class="stat"><div class="n">0</div><div class="l">un-verified merges - every PR gated by deps-verify</div></div>
       <div class="stat"><div class="n">4</div><div class="l">Devin automations, chained into one closed loop</div></div>
     </div>
     <div class="foot"><span class="brand">Autonomous Dependency Security</span><span>8</span></div>
@@ -195,11 +195,11 @@
     <span class="kicker a">When · In a real customer engagement</span>
     <h2>How this scales past the demo</h2>
     <ul>
-      <li class="a">Make the gate <b>semantic</b> — run the real test suite, not just pin integrity</li>
-      <li class="a"><b>Multi-repo, multi-ecosystem</b> — npm, cargo, go.mod via per-ecosystem parsers</li>
+      <li class="a">Make the gate <b>semantic</b> - run the real test suite, not just pin integrity</li>
+      <li class="a"><b>Multi-repo, multi-ecosystem</b> - npm, cargo, go.mod via per-ecosystem parsers</li>
       <li class="a">Notify <b>Slack / PagerDuty</b>; severity-aware <b>SLAs</b> for critical CVEs</li>
       <li class="a"><b>Per-team policy</b>: auto-merge patches, review minors, escalate majors</li>
-      <li class="a">One source of truth — <b>Postgres + a metrics backend</b> as volume grows</li>
+      <li class="a">One source of truth - <b>Postgres + a metrics backend</b> as volume grows</li>
     </ul>
     <div class="foot"><span class="brand">Autonomous Dependency Security</span><span>9</span></div>
   </section>

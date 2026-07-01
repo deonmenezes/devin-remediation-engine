@@ -1,12 +1,12 @@
 """The `deps-verify` merge gate, run by the engine instead of GitHub Actions.
 
 Upstream Superset CI is an 84-job matrix that needs Postgres/MySQL services,
-browser e2e infra and paid GitHub-hosted runners — none of which work on this
+browser e2e infra and paid GitHub-hosted runners - none of which work on this
 private fork (the account's Actions billing is blocked). So the engine plays the
 role of external CI: for every open dependency PR it validates that the changed
 requirements are well-formed and fully pinned, then reports the outcome as a
 `deps-verify` commit status. Branch protection requires that context, so a PR is
-only mergeable once the engine has actually checked it — and the Devin
+only mergeable once the engine has actually checked it - and the Devin
 auto-review-and-merge automation then lands it with no human in the loop.
 """
 

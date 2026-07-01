@@ -119,7 +119,7 @@ def dispatched_packages():
 
 
 def clear_runs():
-    """Wipe the run ledger — used by the dashboard's Reset button so a demo
+    """Wipe the run ledger - used by the dashboard's Reset button so a demo
     can be re-run from a clean slate."""
     with _lock, _connect() as conn:
         deleted = conn.execute("DELETE FROM runs").rowcount

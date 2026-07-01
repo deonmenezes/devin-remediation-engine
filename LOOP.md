@@ -87,4 +87,4 @@ flowchart TD
   class LEDGER observe;
 ```
 
-**Legend** — 🟩 green = automated step · 🟨 amber diamond = decision guard · 🟥 red = human hand-off · 🟦 blue = observability.
+**Legend** - 🟩 green = automated step · 🟨 amber diamond = decision guard · 🟥 red = human hand-off · 🟦 blue = observability.

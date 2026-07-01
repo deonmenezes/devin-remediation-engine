@@ -198,22 +198,22 @@
       <div class="step">
         <div class="top"><span class="num">3</span><span class="k">Fix</span></div>
         <div class="t">Upgrade &amp; open PR</div>
-        <div class="d">Devin bumps the package, runs tests, and opens a PR that <code>Closes</code> every related issue — or comments the blocker.</div>
+        <div class="d">Devin bumps the package, runs tests, and opens a PR that <code>Closes</code> every related issue - or comments the blocker.</div>
         <span class="tag devin"><span class="dot"></span>Devin session</span>
       </div>
       <div class="step">
         <div class="top"><span class="num">4</span><span class="k">Merge</span></div>
         <div class="t">Review &amp; auto-merge</div>
-        <div class="d">A Devin automation checks the diff scope and CI, then approves and merges — only if it's safe.</div>
+        <div class="d">A Devin automation checks the diff scope and CI, then approves and merges - only if it's safe.</div>
         <span class="tag devin"><span class="dot"></span>Devin automation</span>
       </div>
     </div>
-    <p class="caption">Stages 1 &amp; 4 are no-code Devin Automations (listed below). Stages 2–3 are this Dockerized service — drive them live with the buttons.</p>
+    <p class="caption">Stages 1 &amp; 4 are no-code Devin Automations (listed below). Stages 2-3 are this Dockerized service - drive them live with the buttons.</p>
 
     <!-- quickstart -->
     <div class="quick">
       <div class="qstep"><div class="qn">1</div><div class="qt">Trigger dispatch</div><div class="qd">Reads the backlog, groups by package, starts remediation for the top N. Dry-run plans; live starts real sessions.</div></div>
-      <div class="qstep"><div class="qn">2</div><div class="qt">Simulate webhook</div><div class="qd">Fires a signed <code>issues.opened</code> event at the real webhook endpoint — proves the event path, signature and all.</div></div>
+      <div class="qstep"><div class="qn">2</div><div class="qt">Simulate webhook</div><div class="qd">Fires a signed <code>issues.opened</code> event at the real webhook endpoint - proves the event path, signature and all.</div></div>
       <div class="qstep"><div class="qn">3</div><div class="qt">Poll sessions</div><div class="qd">Refreshes in-flight Devin sessions and pulls back each PR link and the ACU it consumed.</div></div>
       <div class="qstep"><div class="qn">4</div><div class="qt">Report / Reset</div><div class="qd">Generate a shareable executive report, or clear the ledger to run the whole demo again.</div></div>
     </div>
@@ -246,7 +246,7 @@
           <thead><tr><th>Package</th><th>Closes</th><th>Advisories</th><th>Status</th><th>Pull Request</th><th>ACU</th></tr></thead>
           <tbody></tbody>
         </table>
-        <div class="empty" id="runs-empty">No runs yet — click <b>Trigger dispatch</b> or <b>Simulate webhook</b> to start.</div>
+        <div class="empty" id="runs-empty">No runs yet - click <b>Trigger dispatch</b> or <b>Simulate webhook</b> to start.</div>
       </div>
     </div>
 
@@ -256,7 +256,7 @@
         <span class="icn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg></span>
         <h2>Package Groups</h2>
         <span class="cnt" id="plan-count">0</span>
-        <span class="desc">17 issues collapse into these — each becomes one PR closing all its issues</span>
+        <span class="desc">17 issues collapse into these - each becomes one PR closing all its issues</span>
       </div>
       <div class="tablewrap">
         <table id="plan-table">
@@ -335,8 +335,8 @@ function renderRuns(runs){
       <td>${issueLinks(r.issue_numbers)}</td>
       <td class="dimtag">${[...new Set(r.advisories)].join(', ')}</td>
       <td>${badge(r.status)}</td>
-      <td>${r.pr_url?`<a class="prlink" href="${r.pr_url}" target="_blank">PR ↗</a>`:'—'}</td>
-      <td>${r.acu_consumed ?? '—'}</td>
+      <td>${r.pr_url?`<a class="prlink" href="${r.pr_url}" target="_blank">PR ↗</a>`:'-'}</td>
+      <td>${r.acu_consumed ?? '-'}</td>
     </tr>`).join('');
 }
 function renderPlan(plan){
@@ -376,7 +376,7 @@ $('btn-trigger').onclick = () => act('Dispatching…', async () => {
   const limit = $('limit-input').value || 3;
   const d = await fetch(`/trigger?limit=${limit}`,{method:'POST'}).then(r=>r.json());
   const names = d.dispatched.map(x=>`${x.package} (${nice(x.status)})`);
-  return names.length ? `Dispatched ${names.length}: ${names.join(', ')}` : 'Nothing new — all packages already handled.';
+  return names.length ? `Dispatched ${names.length}: ${names.join(', ')}` : 'Nothing new - all packages already handled.';
 });
 $('btn-webhook').onclick = () => act('Firing signed webhook…', async () => {
   const d = await fetch('/simulate-webhook',{method:'POST'}).then(r=>r.json());
@@ -385,13 +385,13 @@ $('btn-webhook').onclick = () => act('Firing signed webhook…', async () => {
 });
 $('btn-poll').onclick = () => act('Polling sessions…', async () => {
   const d = await fetch('/poll',{method:'POST'}).then(r=>r.json());
-  return `Polled — updated ${d.updated_run_ids.length} running session(s).`;
+  return `Polled - updated ${d.updated_run_ids.length} running session(s).`;
 });
 $('btn-refresh').onclick = () => act('Refreshing…', async () => 'Up to date.');
 $('btn-report').onclick = () => { window.open('/report', '_blank'); setLog('Opened report in a new tab.', 'ok'); };
 $('btn-reset').onclick = () => act('Resetting…', async () => {
   const d = await fetch('/reset',{method:'POST'}).then(r=>r.json());
-  return `Reset — cleared ${d.cleared_runs} run(s).`;
+  return `Reset - cleared ${d.cleared_runs} run(s).`;
 });
 refreshAll();
 setInterval(refreshAll, 8000);

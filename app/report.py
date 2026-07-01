@@ -1,4 +1,4 @@
-"""Report generation — turns the run ledger + live backlog into an executive
+"""Report generation - turns the run ledger + live backlog into an executive
 summary a VP of Engineering can read at a glance, available as standalone HTML,
 Markdown (shareable in Slack/email), or JSON (for a real metrics pipeline)."""
 from datetime import datetime, timezone
@@ -51,7 +51,7 @@ def build_report():
 def to_markdown(rep):
     k = rep["kpis"]
     lines = [
-        f"# Dependency Remediation Report — `{rep['repo']}`",
+        f"# Dependency Remediation Report - `{rep['repo']}`",
         "",
         f"_Generated {rep['generated_at']} · mode: **{rep['mode']}**_",
         "",
@@ -79,8 +79,8 @@ def to_markdown(rep):
     if rep["runs"]:
         for r in rep["runs"]:
             issues = " ".join(f"#{n}" for n in r["issue_numbers"])
-            pr = r["pr_url"] or "—"
-            lines.append(f"| `{r['package']}` | {issues} | {r['status'].replace('_',' ')} | {pr} | {r['acu_consumed'] or '—'} |")
+            pr = r["pr_url"] or "-"
+            lines.append(f"| `{r['package']}` | {issues} | {r['status'].replace('_',' ')} | {pr} | {r['acu_consumed'] or '-'} |")
     else:
         lines.append("| _no runs dispatched yet_ | | | | |")
     lines += ["", "## Remaining backlog (package groups)", "", "| Package | Issues | Fix version | State |", "|---|---|---|---|"]
@@ -91,14 +91,14 @@ def to_markdown(rep):
         lines.append(f"| `{g['package']}` | {issues} | {fixed} | {state} |")
     lines += ["", "## Automations in the loop", ""]
     for a in rep["automations"]:
-        lines.append(f"- **{a['name']}** — _{a['trigger']}_. {a['purpose']}")
+        lines.append(f"- **{a['name']}** - _{a['trigger']}_. {a['purpose']}")
     lines.append("")
     return "\n".join(lines)
 
 
 def to_html(rep):
     k = rep["kpis"]
-    sr = f"{k['success_rate_pct']}%" if k["success_rate_pct"] is not None else "—"
+    sr = f"{k['success_rate_pct']}%" if k["success_rate_pct"] is not None else "-"
 
     def kpi(n, label):
         return f'<div class="kpi"><div class="n">{n}</div><div class="l">{label}</div></div>'
@@ -117,8 +117,8 @@ def to_html(rep):
         f"<tr><td><code>{r['package']}</code></td>"
         f"<td>{' '.join(f'#{n}' for n in r['issue_numbers'])}</td>"
         f"<td><span class='b b-{r['status']}'>{r['status'].replace('_',' ')}</span></td>"
-        f"<td>{('<a href=' + chr(34) + r['pr_url'] + chr(34) + ' target=_blank>PR ↗</a>') if r['pr_url'] else '—'}</td>"
-        f"<td>{r['acu_consumed'] or '—'}</td></tr>"
+        f"<td>{('<a href=' + chr(34) + r['pr_url'] + chr(34) + ' target=_blank>PR ↗</a>') if r['pr_url'] else '-'}</td>"
+        f"<td>{r['acu_consumed'] or '-'}</td></tr>"
         for r in rep["runs"]
     ) or "<tr><td colspan=5 style='color:#888'>No runs dispatched yet.</td></tr>"
 
@@ -132,7 +132,7 @@ def to_html(rep):
     )
 
     auto_items = "".join(
-        f"<li><b>{a['name']}</b> — <i>{a['trigger']}</i>. {a['purpose']}</li>"
+        f"<li><b>{a['name']}</b> - <i>{a['trigger']}</i>. {a['purpose']}</li>"
         for a in rep["automations"]
     )
 
@@ -182,7 +182,7 @@ def to_html(rep):
 </div>
 <div class=callcard id=callcard>
   <div class=ct><svg width=16 height=16 viewBox="0 0 24 24" fill="none" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.1-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.3 1.8.6 2.6a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.5-1.2a2 2 0 0 1 2.1-.5c.8.3 1.7.5 2.6.6a2 2 0 0 1 1.7 2z"/></svg>Prefer to listen? Get a call that reads this report aloud</div>
-  <p class=cb id=callblurb>We'll phone you and a voice agent will brief you on the remediation status — open CVEs, PRs opened, issues closed, and anything blocked.</p>
+  <p class=cb id=callblurb>We'll phone you and a voice agent will brief you on the remediation status - open CVEs, PRs opened, issues closed, and anything blocked.</p>
   <div class=callform>
     <input id=phone type=tel inputmode=tel placeholder="+1 415 555 0142" aria-label="Your phone number">
     <button id=callbtn>Call me now</button>
@@ -195,7 +195,7 @@ def to_html(rep):
       msg=document.getElementById('callmsg'), blurb=document.getElementById('callblurb');
   fetch('/voice-status').then(function(r){{return r.json()}}).then(function(s){{
     if(!s.configured){{ card.className='callcard off'; btn.disabled=true;
-      blurb.textContent='Calling isn\\'t configured yet — set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_FROM_NUMBER to enable a voice briefing of this report.'; }}
+      blurb.textContent='Calling isn\\'t configured yet - set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_FROM_NUMBER to enable a voice briefing of this report.'; }}
   }});
   btn.onclick=function(){{
     var phone=document.getElementById('phone').value;
@@ -206,7 +206,7 @@ def to_html(rep):
       .then(function(res){{
         if(!res.ok) throw new Error(res.d.detail||'Could not place the call');
         msg.className='callmsg ok';
-        msg.textContent='Calling '+res.d.to+' now — the voice agent will read out the report'+(res.d.used_claude?' (script written by Claude).':'.');
+        msg.textContent='Calling '+res.d.to+' now - the voice agent will read out the report'+(res.d.used_claude?' (script written by Claude).':'.');
       }})
       .catch(function(e){{ msg.className='callmsg err'; msg.textContent=e.message; }})
       .finally(function(){{ btn.disabled=false; }});
@@ -217,7 +217,7 @@ def to_html(rep):
 <div class=kpis>{kpis}</div>
 <h2>Remediation runs</h2>
 <table><thead><tr><th>Package</th><th>Closes</th><th>Status</th><th>PR</th><th>ACU</th></tr></thead><tbody>{run_rows}</tbody></table>
-<h2>Backlog — package groups</h2>
+<h2>Backlog - package groups</h2>
 <table><thead><tr><th>Package</th><th>Issues</th><th>Fix version</th><th>State</th></tr></thead><tbody>{group_rows}</tbody></table>
 <h2>Automations in the loop</h2>
 <ul>{auto_items}</ul>

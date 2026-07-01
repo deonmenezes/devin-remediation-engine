@@ -1,8 +1,8 @@
-# Devin Automations — configuration
+# Devin Automations - configuration
 
 The four no-code automations that drive the event loop live in the Devin app
 (org `deon-menezes-demo-4`). Devin has no public API to edit automations, so the
-prompts below are pasted into each automation's config by hand. Stages 1–3 are
+prompts below are pasted into each automation's config by hand. Stages 1-3 are
 already working; the **only change needed for fully-hands-free merging** is
 updating automation #4 to gate on the `deps-verify` check.
 
@@ -15,7 +15,7 @@ updating automation #4 to gate on the `deps-verify` check.
 
 ---
 
-## #4 — Auto-Review & Merge  ← paste this to finish the loop
+## #4 - Auto-Review & Merge  ← paste this to finish the loop
 
 **Trigger:** Pull request opened in `deonmenezes/superset` where the title starts
 with `security: upgrade`.
@@ -27,7 +27,7 @@ A pull request was just opened in deonmenezes/superset with a title starting
 "security: upgrade". Review and, if safe, merge it with no human involvement.
 
 Steps:
-1. Read the PR diff. Confirm it is scoped to a dependency bump ONLY — changes to
+1. Read the PR diff. Confirm it is scoped to a dependency bump ONLY - changes to
    requirements/*.txt (and, if the compiled lockfile needs it, the matching
    pinned transitive lines). If the diff touches application code, tests, or
    config beyond what the upgrade strictly requires, do NOT merge: leave a
@@ -35,7 +35,7 @@ Steps:
 2. Confirm the PR closes at least one issue (a "Closes #NN" reference).
 3. Wait for the required status check named "deps-verify" to report success.
    This check is posted by the remediation engine (not GitHub Actions) within
-   ~30 seconds of the PR opening — poll for up to 3 minutes. Do NOT look at any
+   ~30 seconds of the PR opening - poll for up to 3 minutes. Do NOT look at any
    other checks; upstream Superset CI is intentionally disabled on this fork and
    "deps-verify" is the only required gate. If deps-verify reports failure,
    comment the failure and stop without merging.
@@ -44,17 +44,17 @@ Steps:
 5. Comment a one-line summary: merged, and which issue(s) it closed.
 
 Never merge a PR whose title upgrade crosses a major version boundary (e.g.
-X.y.z where X increases) — comment that it needs human review and stop.
+X.y.z where X increases) - comment that it needs human review and stop.
 ```
 
 Why this changed: the fork's GitHub Actions are billing-blocked, so "wait for CI
 to go green" would wait forever. The remediation engine now posts a single
 first-class commit status, `deps-verify`, and `master` branch protection requires
-exactly that context — so gating on it is both correct and sufficient.
+exactly that context - so gating on it is both correct and sufficient.
 
 ---
 
-## #2 — Dependency Issue Fix (small robustness tweak, optional)
+## #2 - Dependency Issue Fix (small robustness tweak, optional)
 
 Ensure the fixer **opens the PR as ready-for-review, not a draft**, and titles it
 `security: upgrade <package> to <version> (<advisories>)` with a `Closes #NN` in

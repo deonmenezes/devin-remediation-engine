@@ -92,7 +92,7 @@ def group_by_package(parsed_issues):
         )
         group["issues"].append(item["number"])
         group["advisories"].append(item["advisory"])
-        # Keep the lowest current pin seen — the most conservative baseline for
+        # Keep the lowest current pin seen - the most conservative baseline for
         # deciding whether the fix is a major-version jump.
         if item["current"] and _higher_version(group["current"], item["current"]) == group["current"]:
             group["current"] = item["current"]
@@ -127,7 +127,7 @@ This single upgrade should close these GitHub issues: {issue_refs}.
 
 ## Constraints
 - Make the smallest change that fixes the advisories above. Do not bump unrelated packages.
-- Open a PR only if tests pass. If you cannot complete this safely, do NOT open a broken PR —
+- Open a PR only if tests pass. If you cannot complete this safely, do NOT open a broken PR -
   instead comment on {issue_refs} explaining what blocked you, and end the session without a PR.
 - One PR for this package. Do not duplicate work already done in an open PR.
 
@@ -141,7 +141,7 @@ def build_no_fix_comment(group):
     return (
         f"**Automated remediation status: blocked**\n\n"
         f"No fixed version has been published yet for `{group['package']}` "
-        f"({advisories}). Leaving this open — the periodic advisory scan will "
+        f"({advisories}). Leaving this open - the periodic advisory scan will "
         f"pick it up automatically once a fix is released. No PR opened."
     )
 
@@ -260,7 +260,7 @@ class Orchestrator:
 
     def poll_running(self):
         """Refresh status for every run still in-flight. Safe to call repeatedly
-        (e.g. from a scheduler) — only touches rows that aren't terminal yet."""
+        (e.g. from a scheduler) - only touches rows that aren't terminal yet."""
         updated = []
         for run in store.running_runs():
             if not run["session_id"]:
@@ -297,7 +297,7 @@ class Orchestrator:
         else:
             body = (
                 f"Automated remediation session for `{run['package']}` finished without a PR. "
-                f"Check the Devin session for details — leaving this issue open for manual follow-up."
+                f"Check the Devin session for details - leaving this issue open for manual follow-up."
             )
         for n in run["issue_numbers"]:
             self.gh.comment_on_issue(n, body)

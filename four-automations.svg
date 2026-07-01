@@ -46,7 +46,7 @@
     The 4 Devin Automations
   </text>
   <text x="800" y="99" text-anchor="middle" font-size="20" fill="#64748b">
-    A CVE is found, fixed, and merged — automatically.
+    A CVE is found, fixed, and merged - automatically.
   </text>
 
   <text x="414" y="151" text-anchor="middle" class="phase" fill="#0369a1">DETECT</text>

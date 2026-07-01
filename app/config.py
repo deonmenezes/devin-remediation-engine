@@ -51,7 +51,7 @@ DEVIN_ORG_SLUG = os.environ.get("DEVIN_ORG_SLUG", "deon-menezes-demo-4")
 AUTOMATIONS = [
     {
         "name": "Periodic Advisory Scan for dependencies",
-        "trigger": "Scheduled — daily 09:00 PDT",
+        "trigger": "Scheduled - daily 09:00 PDT",
         "purpose": (
             "Detection only: runs pip-audit against requirements/*.txt and checks GitHub "
             "Dependabot alerts, files a new devin-remediate issue per finding, dedupes "
@@ -64,7 +64,7 @@ AUTOMATIONS = [
         "trigger": "GitHub issue opened in deonmenezes/superset",
         "purpose": (
             "The fixer this service's /trigger and /webhook/github routes duplicate in code: "
-            "upgrades the affected package, runs tests, opens a PR that closes the issue(s) — "
+            "upgrades the affected package, runs tests, opens a PR that closes the issue(s) - "
             "or comments the blocker instead of forcing a broken PR."
         ),
         "automation_id": "26478a64abc04073b950f5dabd2e9b12",
