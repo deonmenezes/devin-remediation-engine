@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="refresh" content="10">
+  <title>Devin Dependency Remediation — Status</title>
+  <style>
+    body { font-family: -apple-system, system-ui, sans-serif; background: #0b0d12; color: #e6e6e6; margin: 0; padding: 32px; }
+    h1 { font-size: 20px; margin-bottom: 4px; }
+    .sub { color: #8a8f98; font-size: 13px; margin-bottom: 24px; }
+    .cards { display: flex; gap: 16px; margin-bottom: 28px; flex-wrap: wrap; }
+    .card { background: #161922; border: 1px solid #2a2e3a; border-radius: 8px; padding: 14px 18px; min-width: 120px; }
+    .card .n { font-size: 22px; font-weight: 600; }
+    .card .l { font-size: 12px; color: #8a8f98; text-transform: uppercase; letter-spacing: .04em; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #232733; }
+    th { color: #8a8f98; font-weight: 500; text-transform: uppercase; font-size: 11px; letter-spacing: .04em; }
+    .badge { padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+    .b-fixed { background: #163a26; color: #4ade80; }
+    .b-running { background: #2a2410; color: #facc15; }
+    .b-blocked, .b-error { background: #3a1616; color: #f87171; }
+    .b-skipped_no_fix { background: #20242f; color: #93c5fd; }
+    .b-dry_run { background: #20242f; color: #a1a1aa; }
+    a { color: #7dd3fc; }
+    code { background: #1a1d27; padding: 1px 5px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>Devin Dependency Remediation Engine</h1>
+  <div class="sub">
+    {% if dry_run %}DRY RUN — no real sessions or PRs{% else %}LIVE{% endif %}
+    · auto-refreshes every 10s
+  </div>
+
+  <div class="cards">
+    <div class="card"><div class="n">{{ summary.total_runs }}</div><div class="l">Total runs</div></div>
+    {% for status, count in summary.by_status.items() %}
+    <div class="card"><div class="n">{{ count }}</div><div class="l">{{ status }}</div></div>
+    {% endfor %}
+    <div class="card"><div class="n">{{ "%.1f"|format(summary.total_acu_consumed) }}</div><div class="l">ACU consumed</div></div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Package</th>
+        <th>Issues</th>
+        <th>Advisories</th>
+        <th>Status</th>
+        <th>PR</th>
+        <th>ACU</th>
+        <th>Updated</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for run in runs %}
+      <tr>
+        <td><code>{{ run.package }}</code></td>
+        <td>{% for n in run.issue_numbers %}#{{ n }} {% endfor %}</td>
+        <td>{{ run.advisories | unique | join(', ') }}</td>
+        <td><span class="badge b-{{ run.status }}">{{ run.status }}</span></td>
+        <td>{% if run.pr_url %}<a href="{{ run.pr_url }}" target="_blank">PR</a>{% else %}—{% endif %}</td>
+        <td>{{ run.acu_consumed or '—' }}</td>
+        <td>{{ run.updated_at | int }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>
