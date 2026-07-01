@@ -6,6 +6,8 @@ that does the actual upgrade-and-PR work. Built against
 [`deonmenezes/superset`](https://github.com/deonmenezes/superset), a fork of
 Apache Superset seeded with real CVEs found in its pinned dependencies.
 
+> 🎤 **Pitch deck** (What / How / Why / When): **[`pitch.pdf`](pitch.pdf)** — source [`pitch.html`](pitch.html).
+
 ## The problem
 
 A scheduled scanner (or Dependabot, or any SCA tool) files a GitHub issue

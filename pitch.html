@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Autonomous Dependency Security — Devin Take-Home</title>
+<style>
+  :root{
+    --ink:#0f172a; --slate:#334155; --muted:#64748b; --line:#e2e8f0;
+    --canvas:#f1f5f9; --card:#ffffff;
+    --blue:#2563eb; --blue-050:#eff6ff;
+    --green:#16a34a; --green-050:#ecfdf5;
+    --amber:#d97706; --amber-050:#fffbeb;
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html,body{background:var(--canvas); font-family:-apple-system,'Segoe UI',Inter,Arial,sans-serif; color:var(--ink); -webkit-font-smoothing:antialiased}
+  .deck{display:flex; flex-direction:column; align-items:center; gap:26px; padding:34px 0}
+
+  .slide{
+    position:relative; width:1280px; height:720px; background:var(--card);
+    border:1px solid var(--line); border-radius:16px; overflow:hidden;
+    box-shadow:0 10px 30px rgba(15,23,42,.08); padding:58px 72px 94px;
+    display:flex; flex-direction:column;
+  }
+  .accent{position:absolute; left:0; top:0; bottom:0; width:8px; background:var(--blue)}
+  .accent.g{background:var(--green)} .accent.a{background:var(--amber)}
+
+  .kicker{display:inline-flex; align-items:center; gap:8px; align-self:flex-start;
+    font-size:15px; font-weight:700; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--blue); background:var(--blue-050); border:1px solid #dbeafe;
+    padding:7px 14px; border-radius:999px}
+  .kicker.g{color:var(--green); background:var(--green-050); border-color:#d1fae5}
+  .kicker.a{color:var(--amber); background:var(--amber-050); border-color:#fde68a}
+
+  h1{font-size:58px; line-height:1.08; font-weight:800; letter-spacing:-.02em; margin-top:22px}
+  h2{font-size:44px; line-height:1.12; font-weight:800; letter-spacing:-.02em; margin-top:20px; max-width:16ch}
+  .sub{font-size:24px; color:var(--slate); margin-top:20px; font-weight:500; max-width:40ch}
+
+  ul{list-style:none; margin-top:22px; display:flex; flex-direction:column; gap:15px}
+  li{position:relative; padding-left:40px; font-size:25px; line-height:1.3; color:var(--slate); max-width:46ch}
+  li::before{content:""; position:absolute; left:6px; top:12px; width:12px; height:12px;
+    border-radius:3px; background:var(--blue); transform:rotate(45deg)}
+  li.g::before{background:var(--green)} li.a::before{background:var(--amber)}
+  li b{color:var(--ink); font-weight:700}
+
+  .callout{margin-top:auto; margin-bottom:6px; align-self:flex-start; font-size:22px; font-weight:600;
+    color:var(--ink); background:var(--canvas); border:1px solid var(--line);
+    border-left:5px solid var(--blue); border-radius:10px; padding:15px 22px; max-width:56ch}
+
+  .row{display:flex; gap:40px; align-items:center; flex:1; margin-top:24px}
+  .row .txt{flex:1} .row .fig{flex:0 0 auto}
+  .fig img{max-height:420px; max-width:600px; border:1px solid var(--line); border-radius:12px; background:#fff}
+  .full-fig{flex:1; display:flex; align-items:center; justify-content:center; margin-top:20px}
+  .full-fig img{max-width:100%; max-height:440px; border:1px solid var(--line); border-radius:12px}
+
+  .stats{display:grid; grid-template-columns:1fr 1fr; gap:22px 40px; margin-top:34px}
+  .stat{background:var(--canvas); border:1px solid var(--line); border-radius:12px; padding:22px 26px}
+  .stat .n{font-size:44px; font-weight:800; color:var(--blue); letter-spacing:-.02em}
+  .stat .n.g{color:var(--green)} .stat .n.a{color:var(--amber)}
+  .stat .l{font-size:19px; color:var(--slate); margin-top:6px; line-height:1.3}
+
+  .foot{position:absolute; left:72px; right:72px; bottom:26px; display:flex;
+    justify-content:space-between; align-items:center; font-size:15px; color:var(--muted);
+    border-top:1px solid var(--line); padding-top:14px}
+  .foot .brand{font-weight:700; color:var(--slate)}
+
+  /* title slide */
+  .title-slide{justify-content:center; text-align:center; align-items:center;
+    background:radial-gradient(120% 120% at 15% 0%, #ffffff 0%, #f8fafc 55%, #eef2ff 100%)}
+  .title-slide .kicker{align-self:center}
+  .title-slide h1{font-size:72px; margin-top:26px}
+  .title-slide .sub{text-align:center; max-width:38ch; font-size:26px}
+  .byline{margin-top:40px; font-size:20px; color:var(--muted)}
+  .byline b{color:var(--ink)}
+
+  @media print{
+    @page{ size:1280px 720px; margin:0 }
+    html,body{background:#fff}
+    .deck{gap:0; padding:0}
+    .slide{border:none; border-radius:0; box-shadow:none; page-break-after:always; break-after:page}
+    .slide:last-child{page-break-after:auto}
+  }
+</style>
+</head>
+<body>
+<div class="deck">
+
+  <!-- 1 · TITLE -->
+  <section class="slide title-slide">
+    <span class="kicker">Devin Take-Home · Cognition</span>
+    <h1>Autonomous Dependency Security</h1>
+    <p class="sub">Turning never-ending CVE toil into a hands-free remediation loop — with Devin doing the work.</p>
+    <div class="byline">Presented by <b>Deon Menezes</b> &nbsp;·&nbsp; live on a fork of Apache Superset</div>
+  </section>
+
+  <!-- 2 · WHAT -->
+  <section class="slide">
+    <span class="accent"></span>
+    <span class="kicker">What · The problem</span>
+    <h2>Dependency security is endless toil for engineering teams</h2>
+    <ul>
+      <li>Scanners file a steady <b>drip of CVE issues</b> — every week, forever</li>
+      <li>Each one is the same grind: <b>triage → bump → fix conflicts → test → PR → merge</b></li>
+      <li>Low-value, high-interrupt work that pulls <b>senior engineers off the roadmap</b></li>
+      <li>Skip it and <b>security debt and audit risk compound</b></li>
+    </ul>
+    <div class="callout">Important, tedious, and never actually done — the perfect job to automate.</div>
+    <div class="foot"><span class="brand">Autonomous Dependency Security</span><span>2</span></div>
+  </section>
+
+  <!-- 3 · THE IDEA -->
+  <section class="slide">
+    <span class="accent"></span>
+    <span class="kicker">The idea</span>
+    <h2 style="margin-bottom:4px">An event-driven loop where Devin does the fixing</h2>
+    <div class="full-fig"><img src="four-automations.png" alt="The 4 Devin automations"></div>
+    <div class="foot"><span class="brand">A CVE is detected → fixed → verified → merged, automatically</span><span>3</span></div>
+  </section>
+
+  <!-- 4 · HOW / DEMO -->
+  <section class="slide">
+    <span class="accent"></span>
+    <span class="kicker">How · The demo</span>
+    <h2>The loop in action</h2>
+    <ul>
+      <li>A scan files a <b>devin-remediate</b> issue for each new CVE</li>
+      <li>Devin opens a scoped PR — <b>“security: upgrade X → Y”, “Closes #N”</b></li>
+      <li>The engine posts the <b>deps-verify</b> check; branch protection requires it</li>
+      <li>Devin auto-reviews scope + green check, then <b>squash-merges</b> and the issue closes</li>
+      <li>A live <b>control room</b> shows every run, PR link, and ACU spent</li>
+    </ul>
+    <div class="callout">One CVE issue in → one merged, verified pull request out. No human on the happy path.</div>
+    <div class="foot"><span class="brand">Autonomous Dependency Security</span><span>4</span></div>
+  </section>
+
+  <!-- 5 · HOW / ARCHITECTURE -->
+  <section class="slide">
+    <span class="accent"></span>
+    <span class="kicker">How · Key decisions in the code</span>
+    <div class="row">
+      <div class="txt">
+        <ul>
+          <li><b>Group by package</b> — one PR per package, not one per CVE</li>
+          <li><b>Guardrails</b>: no published fix, or a <b>major-version bump</b> → held for a human</li>
+          <li><b>The engine is the CI</b> — posts a first-class <b>deps-verify</b> status (private fork, Actions off)</li>
+          <li><b>Dry-run, a run ledger, and a report</b> so a lead can see it working</li>
+        </ul>
+      </div>
+      <div class="fig"><img src="loop.png" alt="Full loop architecture"></div>
+    </div>
+    <div class="foot"><span class="brand">Autonomous Dependency Security</span><span>5</span></div>
+  </section>
+
+  <!-- 6 · FULL FLOWCHART -->
+  <section class="slide">
+    <span class="accent"></span>
+    <span class="kicker">How · The full loop</span>
+    <h2 style="font-size:32px; margin-top:14px; margin-bottom:2px">Every path — including the guardrails</h2>
+    <div class="full-fig"><img src="loop.png" alt="Full remediation loop flowchart" style="max-height:548px; max-width:88%"></div>
+    <div class="foot"><span class="brand">Green = automated&nbsp; ·&nbsp; amber = decision&nbsp; ·&nbsp; red = human hand-off</span><span>6</span></div>
+  </section>
+
+  <!-- 7 · WHY DEVIN -->
+  <section class="slide">
+    <span class="accent g"></span>
+    <span class="kicker g">Why · Why Devin</span>
+    <h2>This needs an agent, not a script</h2>
+    <ul>
+      <li class="g">A script bumps a pin. <b>Devin reads the repo</b>, regenerates lockfiles, resolves conflicts, fixes compatibility, runs tests, and writes the PR</li>
+      <li class="g">Handles the <b>long tail</b> — transitive pins and code changes — that break naive bots</li>
+      <li class="g">Native <b>automations trigger on GitHub events</b> — no glue infrastructure to run</li>
+      <li class="g"><b>Judgment</b>: it recognizes when a fix isn’t safe and stops</li>
+    </ul>
+    <div class="callout" style="border-left-color:var(--green)">The value isn’t the version bump. It’s everything around the bump.</div>
+    <div class="foot"><span class="brand">Autonomous Dependency Security</span><span>7</span></div>
+  </section>
+
+  <!-- 7 · PROOF -->
+  <section class="slide">
+    <span class="accent g"></span>
+    <span class="kicker g">Proof · It works, end to end</span>
+    <h2 style="margin-bottom:0">Live on a real repository</h2>
+    <div class="stats">
+      <div class="stat"><div class="n g">15 / 17</div><div class="l">CVEs remediated and merged — hands-free</div></div>
+      <div class="stat"><div class="n a">2 held</div><div class="l">correctly: flask (major migration) &amp; paramiko (no fix)</div></div>
+      <div class="stat"><div class="n">0</div><div class="l">un-verified merges — every PR gated by deps-verify</div></div>
+      <div class="stat"><div class="n">4</div><div class="l">Devin automations, chained into one closed loop</div></div>
+    </div>
+    <div class="foot"><span class="brand">Autonomous Dependency Security</span><span>8</span></div>
+  </section>
+
+  <!-- 8 · WHEN / NEXT -->
+  <section class="slide">
+    <span class="accent a"></span>
+    <span class="kicker a">When · In a real customer engagement</span>
+    <h2>How this scales past the demo</h2>
+    <ul>
+      <li class="a">Make the gate <b>semantic</b> — run the real test suite, not just pin integrity</li>
+      <li class="a"><b>Multi-repo, multi-ecosystem</b> — npm, cargo, go.mod via per-ecosystem parsers</li>
+      <li class="a">Notify <b>Slack / PagerDuty</b>; severity-aware <b>SLAs</b> for critical CVEs</li>
+      <li class="a"><b>Per-team policy</b>: auto-merge patches, review minors, escalate majors</li>
+      <li class="a">One source of truth — <b>Postgres + a metrics backend</b> as volume grows</li>
+    </ul>
+    <div class="foot"><span class="brand">Autonomous Dependency Security</span><span>9</span></div>
+  </section>
+
+  <!-- 9 · CLOSE -->
+  <section class="slide title-slide">
+    <span class="kicker g">Thank you</span>
+    <h1 style="font-size:60px">Dependency security, on autopilot</h1>
+    <p class="sub">Detect → fix → verify → merge. Humans only on the exceptions.</p>
+    <div class="byline"><b>Deon Menezes</b> &nbsp;·&nbsp; built with Devin</div>
+  </section>
+
+</div>
+</body>
+</html>
