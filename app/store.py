@@ -118,6 +118,15 @@ def dispatched_packages():
         return {r["package"] for r in rows}
 
 
+def clear_runs():
+    """Wipe the run ledger — used by the dashboard's Reset button so a demo
+    can be re-run from a clean slate."""
+    with _lock, _connect() as conn:
+        deleted = conn.execute("DELETE FROM runs").rowcount
+        conn.commit()
+        return deleted
+
+
 def summary():
     runs = all_runs()
     counts = {}

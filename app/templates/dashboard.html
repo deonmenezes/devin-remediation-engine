@@ -2,69 +2,290 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="refresh" content="10">
-  <title>Devin Dependency Remediation — Status</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Devin Dependency Remediation — Control Room</title>
   <style>
-    body { font-family: -apple-system, system-ui, sans-serif; background: #0b0d12; color: #e6e6e6; margin: 0; padding: 32px; }
-    h1 { font-size: 20px; margin-bottom: 4px; }
-    .sub { color: #8a8f98; font-size: 13px; margin-bottom: 24px; }
-    .cards { display: flex; gap: 16px; margin-bottom: 28px; flex-wrap: wrap; }
-    .card { background: #161922; border: 1px solid #2a2e3a; border-radius: 8px; padding: 14px 18px; min-width: 120px; }
-    .card .n { font-size: 22px; font-weight: 600; }
-    .card .l { font-size: 12px; color: #8a8f98; text-transform: uppercase; letter-spacing: .04em; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #232733; }
-    th { color: #8a8f98; font-weight: 500; text-transform: uppercase; font-size: 11px; letter-spacing: .04em; }
-    .badge { padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
-    .b-fixed { background: #163a26; color: #4ade80; }
-    .b-running { background: #2a2410; color: #facc15; }
-    .b-blocked, .b-error { background: #3a1616; color: #f87171; }
-    .b-skipped_no_fix { background: #20242f; color: #93c5fd; }
-    .b-dry_run { background: #20242f; color: #a1a1aa; }
-    a { color: #7dd3fc; }
-    code { background: #1a1d27; padding: 1px 5px; border-radius: 4px; }
+    :root { --bg:#0b0d12; --panel:#12141c; --panel2:#161922; --line:#242836; --muted:#8a8f98; --text:#e6e6e6; --accent:#2563eb; }
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 28px 32px 60px; }
+    a { color: #7dd3fc; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code { background: #1a1d27; padding: 1px 5px; border-radius: 4px; font-size: .92em; }
+    h1 { font-size: 21px; margin: 0 0 4px; }
+    h2 { font-size: 13px; color: #c9cdd6; margin: 30px 0 12px; text-transform: uppercase; letter-spacing: .05em; }
+    .sub { color: var(--muted); font-size: 13px; margin-bottom: 22px; }
+    .mode { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: .05em; }
+    .mode-dry { background: #20242f; color: #a1a1aa; }
+    .mode-live { background: #3a1616; color: #f87171; }
+
+    /* pipeline */
+    .pipe { display:flex; align-items:stretch; gap:0; margin-bottom: 8px; flex-wrap: wrap; }
+    .stage { flex:1; min-width:180px; background: var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 16px; position:relative; }
+    .stage + .stage { margin-left: 26px; }
+    .stage + .stage::before { content:"▸"; position:absolute; left:-20px; top:50%; transform:translateY(-50%); color:#3a4050; font-size:16px; }
+    .stage .k { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+    .stage .t { font-size:14px; font-weight:600; margin:4px 0 6px; }
+    .stage .d { font-size:12px; color:#aab0bb; line-height:1.45; }
+    .stage .who { display:inline-block; margin-top:8px; font-size:10px; padding:2px 7px; border-radius:10px; background:#1b2130; color:#93c5fd; }
+    .stage .who.devin { background:#20182f; color:#c4b5fd; }
+
+    /* guide */
+    .guide { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px 20px; margin-bottom:20px; }
+    .guide ol { margin:0; padding-left:20px; }
+    .guide li { font-size:13px; color:#c3c8d2; margin:6px 0; line-height:1.5; }
+    .guide b { color:var(--text); }
+
+    /* controls */
+    .controls { display:flex; align-items:center; gap:10px; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin-bottom:10px; flex-wrap:wrap; }
+    .controls label { font-size:12px; color:var(--muted); }
+    .controls input[type=number] { width:56px; background:var(--bg); border:1px solid var(--line); color:var(--text); border-radius:6px; padding:6px 8px; }
+    .sep { width:1px; align-self:stretch; background:var(--line); margin:0 4px; }
+    button { background:var(--accent); color:#fff; border:none; border-radius:7px; padding:9px 15px; font-size:13px; font-weight:600; cursor:pointer; transition:background .12s, opacity .12s; }
+    button:hover { background:#1d4ed8; }
+    button.secondary { background:#232733; }
+    button.secondary:hover { background:#2c313f; }
+    button.danger { background:#3a1c1c; color:#fca5a5; }
+    button.danger:hover { background:#4a2222; }
+    button:disabled { opacity:.5; cursor:default; }
+    .hint { font-size:11px; color:#5b6070; margin:2px 0 0 2px; width:100%; }
+    #action-log { font-size:12.5px; color:#9aa0ab; margin-left:2px; min-height:16px; }
+    #action-log.busy { color:#facc15; }
+    #action-log.ok { color:#4ade80; }
+    #action-log.err { color:#f87171; }
+
+    /* cards */
+    .cards { display:flex; gap:14px; margin:14px 0 4px; flex-wrap:wrap; }
+    .card { background:var(--panel2); border:1px solid var(--line); border-radius:9px; padding:13px 18px; min-width:104px; }
+    .card .n { font-size:22px; font-weight:600; }
+    .card .l { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+
+    /* tables */
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th, td { text-align:left; padding:9px 10px; border-bottom:1px solid #1f2430; vertical-align:top; }
+    th { color:var(--muted); font-weight:500; text-transform:uppercase; font-size:11px; letter-spacing:.04em; }
+    tbody tr:hover { background:#12141c; }
+    .badge { padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600; white-space:nowrap; }
+    .b-fixed, .b-merged { background:#163a26; color:#4ade80; }
+    .b-running { background:#2a2410; color:#facc15; }
+    .b-blocked, .b-error { background:#3a1616; color:#f87171; }
+    .b-skipped_no_fix { background:#20242f; color:#93c5fd; }
+    .b-dry_run { background:#20242f; color:#a1a1aa; }
+    .b-pending { background:#1c2230; color:#7dd3fc; }
+    .b-done { background:#14201c; color:#4ade80; }
+    .sev-critical { background:#3a1616; color:#f87171; }
+    .sev-high { background:#3a2416; color:#fb923c; }
+    .sev-medium { background:#2a2410; color:#facc15; }
+    .sev-low { background:#14201c; color:#4ade80; }
+    .sev-unknown { background:#20242f; color:#a1a1aa; }
+    .empty { color:#5b6070; font-size:13px; padding:10px 2px; }
+    .note { font-size:12px; color:var(--muted); margin:-4px 0 10px; }
   </style>
 </head>
 <body>
-  <h1>Devin Dependency Remediation Engine</h1>
+  <h1>Devin Dependency Remediation — Control Room</h1>
   <div class="sub">
-    {% if dry_run %}DRY RUN — no real sessions or PRs{% else %}LIVE{% endif %}
-    · auto-refreshes every 10s
+    <span id="mode-badge" class="mode {{ 'mode-live' if not dry_run else 'mode-dry' }}">{{ 'LIVE' if not dry_run else 'DRY RUN' }}</span>
+    · target repo <a href="{{ repo_url }}" target="_blank"><code>{{ repo }}</code></a>
+    · issues labeled <code>{{ issue_label }}</code>
+    · <a href="{{ repo_url }}/issues?q=is:issue+label:{{ issue_label }}" target="_blank">view issues on GitHub ↗</a>
+    · <a href="{{ repo_url }}/pulls" target="_blank">view PRs ↗</a>
   </div>
 
-  <div class="cards">
-    <div class="card"><div class="n">{{ summary.total_runs }}</div><div class="l">Total runs</div></div>
-    {% for status, count in summary.by_status.items() %}
-    <div class="card"><div class="n">{{ count }}</div><div class="l">{{ status }}</div></div>
-    {% endfor %}
-    <div class="card"><div class="n">{{ "%.1f"|format(summary.total_acu_consumed) }}</div><div class="l">ACU consumed</div></div>
+  <!-- Pipeline visualization -->
+  <div class="pipe">
+    <div class="stage">
+      <div class="k">1 · Detect</div>
+      <div class="t">Scan &amp; file issues</div>
+      <div class="d">Scheduled advisory scan finds vulnerable pins and opens one <code>{{ issue_label }}</code> issue per CVE.</div>
+      <span class="who devin">Devin automation</span>
+    </div>
+    <div class="stage">
+      <div class="k">2 · Dispatch</div>
+      <div class="t">Group &amp; hand off</div>
+      <div class="d">This service groups issues by package (highest fix wins) and starts one Devin session per package.</div>
+      <span class="who">This engine</span>
+    </div>
+    <div class="stage">
+      <div class="k">3 · Fix</div>
+      <div class="t">Upgrade &amp; open PR</div>
+      <div class="d">Devin bumps the package, runs tests, opens a PR that <code>Closes</code> every related issue — or comments the blocker.</div>
+      <span class="who devin">Devin session</span>
+    </div>
+    <div class="stage">
+      <div class="k">4 · Merge</div>
+      <div class="t">Review &amp; auto-merge</div>
+      <div class="d">A Devin automation checks scope + CI, then approves and merges only if it's safe.</div>
+      <span class="who devin">Devin automation</span>
+    </div>
+  </div>
+  <div class="note">Stages 1 and 4 run as no-code Devin Automations (bottom of page). Stages 2–3 are this Dockerized service — driven live by the buttons below.</div>
+
+  <!-- How to simulate -->
+  <div class="guide">
+    <b style="font-size:13px;">How to simulate the workflow (no terminal needed):</b>
+    <ol>
+      <li><b>Trigger dispatch</b> — reads the live issue backlog, groups by package, and starts remediation for the top N packages. In <b>DRY RUN</b> this plans without spending ACU or opening PRs; in <b>LIVE</b> it starts real Devin sessions.</li>
+      <li><b>Simulate GitHub webhook</b> — fires a signed <code>issues.opened</code> event at this service's own webhook endpoint, proving the event-driven path end-to-end (signature check included).</li>
+      <li><b>Poll running sessions</b> — refreshes the status of in-flight Devin sessions and pulls back any PR link + ACU spent.</li>
+      <li><b>Reset</b> — clears the run ledger so you can demo again from a clean slate.</li>
+    </ol>
   </div>
 
-  <table>
-    <thead>
-      <tr>
-        <th>Package</th>
-        <th>Issues</th>
-        <th>Advisories</th>
-        <th>Status</th>
-        <th>PR</th>
-        <th>ACU</th>
-        <th>Updated</th>
-      </tr>
-    </thead>
+  <!-- Controls -->
+  <div class="controls">
+    <button id="btn-trigger" title="Group the open issues and dispatch remediation for the top N packages">▶ Trigger dispatch</button>
+    <label for="limit-input">limit</label>
+    <input id="limit-input" type="number" min="1" max="20" value="{{ default_limit }}">
+    <div class="sep"></div>
+    <button id="btn-webhook" class="secondary" title="Fire a signed synthetic GitHub issues.opened event at /webhook/github">⚡ Simulate GitHub webhook</button>
+    <button id="btn-poll" class="secondary" title="Refresh status of running Devin sessions">↻ Poll running sessions</button>
+    <button id="btn-refresh" class="secondary" title="Re-fetch all tables now">⟳ Refresh</button>
+    <div class="sep"></div>
+    <button id="btn-reset" class="danger" title="Clear the run ledger for a fresh demo">✕ Reset</button>
+    <div id="action-log">Ready.</div>
+  </div>
+
+  <!-- Summary cards -->
+  <div class="cards" id="cards"></div>
+
+  <!-- Runs -->
+  <h2>Remediation Runs</h2>
+  <table id="runs-table">
+    <thead><tr><th>Package</th><th>Closes issues</th><th>Advisories</th><th>Fix</th><th>Status</th><th>PR</th><th>ACU</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <div class="empty" id="runs-empty">No runs yet — click <b>▶ Trigger dispatch</b> or <b>⚡ Simulate GitHub webhook</b> above.</div>
+
+  <!-- Upcoming plan -->
+  <h2>Upcoming — package groups from the open backlog</h2>
+  <div class="note">17 issues collapse into these package groups. Each becomes one PR that closes all of its issues. Max ACU per session: <code>{{ max_acu }}</code>.</div>
+  <table id="plan-table">
+    <thead><tr><th>Package</th><th>Issues</th><th>Fix version</th><th>State</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <!-- Open issues -->
+  <h2>Open Issues (<span id="issue-count">0</span>) — the raw backlog</h2>
+  <table id="issues-table">
+    <thead><tr><th>#</th><th>Title</th><th>Package</th><th>Current → Fix</th><th>Advisory</th><th>Severity</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <!-- Automations -->
+  <h2>Devin Automations — the no-code trigger &amp; merge stages</h2>
+  <div class="note">Devin has no public API to poll automation status, so these link out to the live automations rather than faking an indicator.</div>
+  <table id="automations-table">
+    <thead><tr><th>Name</th><th>Trigger</th><th>What it does</th><th></th></tr></thead>
     <tbody>
-      {% for run in runs %}
+      {% for a in automations %}
       <tr>
-        <td><code>{{ run.package }}</code></td>
-        <td>{% for n in run.issue_numbers %}#{{ n }} {% endfor %}</td>
-        <td>{{ run.advisories | unique | join(', ') }}</td>
-        <td><span class="badge b-{{ run.status }}">{{ run.status }}</span></td>
-        <td>{% if run.pr_url %}<a href="{{ run.pr_url }}" target="_blank">PR</a>{% else %}—{% endif %}</td>
-        <td>{{ run.acu_consumed or '—' }}</td>
-        <td>{{ run.updated_at | int }}</td>
+        <td style="white-space:nowrap;">{{ a.name }}</td>
+        <td style="font-size:12px;color:#aab0bb;">{{ a.trigger }}</td>
+        <td style="max-width:440px;font-size:12.5px;color:#c3c8d2;">{{ a.purpose }}</td>
+        <td style="white-space:nowrap;"><a href="{{ a.url }}" target="_blank">Open in Devin ↗</a></td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const REPO_URL = {{ repo_url | tojson }};
+function setLog(msg, cls) { const el = $('action-log'); el.textContent = msg; el.className = cls || ''; }
+
+function renderCards(s) {
+  const parts = [`<div class="card"><div class="n">${s.total_runs}</div><div class="l">Total runs</div></div>`];
+  for (const [k, v] of Object.entries(s.by_status)) {
+    parts.push(`<div class="card"><div class="n">${v}</div><div class="l">${k.replace(/_/g,' ')}</div></div>`);
+  }
+  parts.push(`<div class="card"><div class="n">${s.total_acu_consumed.toFixed(1)}</div><div class="l">ACU consumed</div></div>`);
+  $('cards').innerHTML = parts.join('');
+}
+
+function renderRuns(runs) {
+  const tbody = document.querySelector('#runs-table tbody');
+  $('runs-empty').style.display = runs.length ? 'none' : 'block';
+  tbody.innerHTML = runs.map(r => `
+    <tr>
+      <td><code>${r.package}</code></td>
+      <td>${r.issue_numbers.map(n => `<a href="${REPO_URL}/issues/${n}" target="_blank">#${n}</a>`).join(' ')}</td>
+      <td style="font-size:11.5px;color:#aab0bb;">${[...new Set(r.advisories)].join(', ')}</td>
+      <td>${r.dry_run ? '<span style="color:#5b6070;">(dry)</span>' : ''}</td>
+      <td><span class="badge b-${r.status}">${r.status.replace(/_/g,' ')}</span></td>
+      <td>${r.pr_url ? `<a href="${r.pr_url}" target="_blank">PR ↗</a>` : '—'}</td>
+      <td>${r.acu_consumed ?? '—'}</td>
+    </tr>`).join('');
+}
+
+function renderPlan(plan) {
+  document.querySelector('#plan-table tbody').innerHTML = plan.groups.map(g => `
+    <tr>
+      <td><code>${g.package}</code></td>
+      <td>${g.issues.map(n => `<a href="${REPO_URL}/issues/${n}" target="_blank">#${n}</a>`).join(' ')}</td>
+      <td>${g.fixed || '<span style="color:#f87171;">no fix published</span>'}</td>
+      <td>${g.already_dispatched ? '<span class="badge b-done">dispatched</span>' : '<span class="badge b-pending">pending</span>'}</td>
+    </tr>`).join('');
+}
+
+function renderIssues(plan) {
+  $('issue-count').textContent = plan.issues.length;
+  document.querySelector('#issues-table tbody').innerHTML = plan.issues.map(i => `
+    <tr>
+      <td><a href="${i.html_url}" target="_blank">#${i.number}</a></td>
+      <td style="font-size:12.5px;">${i.title}</td>
+      <td><code>${i.package}</code></td>
+      <td>${i.current} → ${i.fixed || '<span style="color:#f87171;">no fix</span>'}</td>
+      <td style="font-size:11.5px;color:#aab0bb;">${i.advisory}</td>
+      <td><span class="badge sev-${i.severity}">${i.severity}</span></td>
+    </tr>`).join('');
+}
+
+async function refreshAll() {
+  const [s, p] = await Promise.all([fetch('/status').then(r=>r.json()), fetch('/plan').then(r=>r.json())]);
+  renderCards(s.summary); renderRuns(s.runs); renderPlan(p); renderIssues(p);
+}
+
+async function act(btn, busyMsg, fn) {
+  document.querySelectorAll('button').forEach(b => b.disabled = true);
+  setLog(busyMsg, 'busy');
+  try {
+    const okMsg = await fn();
+    await refreshAll();
+    setLog(okMsg, 'ok');
+  } catch (e) {
+    setLog('Error: ' + e, 'err');
+  } finally {
+    document.querySelectorAll('button').forEach(b => b.disabled = false);
+  }
+}
+
+$('btn-trigger').onclick = () => act($('btn-trigger'), 'Dispatching…', async () => {
+  const limit = $('limit-input').value || 3;
+  const d = await fetch(`/trigger?limit=${limit}`, {method:'POST'}).then(r=>r.json());
+  const names = d.dispatched.map(x => `${x.package} (${x.status.replace(/_/g,' ')})`);
+  return names.length ? `Dispatched: ${names.join(', ')}` : 'Nothing new to dispatch — all packages already handled.';
+});
+
+$('btn-webhook').onclick = () => act($('btn-webhook'), 'Firing signed webhook…', async () => {
+  const d = await fetch('/simulate-webhook', {method:'POST'}).then(r=>r.json());
+  const pkgs = (d.result && d.result.dispatched) || [];
+  return `Webhook ${d.webhook_status} · signature verified · dispatched: ${pkgs.length ? pkgs.join(', ') : 'nothing new'}`;
+});
+
+$('btn-poll').onclick = () => act($('btn-poll'), 'Polling sessions…', async () => {
+  const d = await fetch('/poll', {method:'POST'}).then(r=>r.json());
+  return `Polled — updated ${d.updated_run_ids.length} running session(s).`;
+});
+
+$('btn-refresh').onclick = () => act($('btn-refresh'), 'Refreshing…', async () => 'Up to date.');
+
+$('btn-reset').onclick = () => act($('btn-reset'), 'Resetting…', async () => {
+  const d = await fetch('/reset', {method:'POST'}).then(r=>r.json());
+  return `Reset — cleared ${d.cleared_runs} run(s).`;
+});
+
+refreshAll();
+setInterval(refreshAll, 8000);
+</script>
 </body>
 </html>

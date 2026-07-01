@@ -18,12 +18,18 @@ Devin session with explicit instructions and guardrails. It reports back
 what happened so an engineering lead can see throughput and success rate
 without reading every PR.
 
-## Architecture
+## Architecture — the full loop
 
 ```
+  ┌─ STAGE 1 (Devin Automation) ────────────────────────────────┐
+  │  Scheduled/push scan → files one `devin-remediate` issue per │
+  │  CVE. Detection only, never opens a PR.                      │
+  └──────────────────────────────┬──────────────────────────────┘
+                                  ▼  (GitHub issues)
 GitHub issue opened/labeled  ──┐
 GitHub push                  ──┼─▶  POST /webhook/github  ──┐
-Manual demo trigger          ──┘    POST /trigger           │
+Simulate-webhook button      ──┤    POST /simulate-webhook  │   ← STAGE 2 (this service)
+Trigger-dispatch button      ──┘    POST /trigger           │
                                                               ▼
                                                        Orchestrator
                                             (app/orchestrator.py)
@@ -32,8 +38,8 @@ Manual demo trigger          ──┘    POST /trigger           │
                                       highest fix version per package
                                    3. skip packages already dispatched
                                    4. for packages with a published fix:
-                                        Devin v3 create_session(prompt)
-                                      for packages with none:
+                                        Devin v3 create_session(prompt)   ← STAGE 3 (Devin session
+                                      for packages with none:                opens the PR)
                                         comment the blocker, no session
                                                               │
                                                               ▼
@@ -47,7 +53,17 @@ Manual demo trigger          ──┘    POST /trigger           │
                               comments back on the issue(s)   │
                                                               ▼
                                           GET /status (JSON) · GET /dashboard (HTML)
+
+  ┌─ STAGE 4 (Devin Automation) ────────────────────────────────┐
+  │  PR opened (title "security: upgrade…") → check diff scope + │
+  │  CI green → approve & merge, else comment the blocker.       │
+  └─────────────────────────────────────────────────────────────┘
 ```
+
+Stages 1 and 4 are no-code **Devin Automations** configured in the Devin app;
+stages 2–3 are this Dockerized service. Together they close the loop from
+"CVE disclosed" to "fix merged" with a human only in the loop when something
+looks unsafe.
 
 Key files:
 
@@ -86,26 +102,37 @@ cp .env.example .env
 docker compose up --build
 ```
 
-The service comes up on `http://localhost:8000`.
+The service comes up on `http://localhost:8000` and redirects `/` straight to
+the dashboard.
 
-- `GET /healthz` — confirms required env vars are present
-- `GET /plan` — read-only: what packages would be dispatched next (safe to call anytime)
-- `POST /trigger?limit=3` — dispatch a pass (real or dry-run, depending on `DRY_RUN`)
-- `GET /status` — JSON: every run, current status, PR URL, ACU consumed
-- `GET /dashboard` — the same data as a live-updating HTML table
-- `POST /webhook/github` — what a real GitHub webhook (issues / push events) hits
+### The dashboard is the whole demo — no terminal required
 
-### Demoing the event trigger without a public URL
+Open **`http://localhost:8000/dashboard`**. It's a self-service "control room"
+with a pipeline diagram, a step-by-step guide, and every action wired to a
+working button:
 
-```bash
-python scripts/simulate_webhook.py
-```
+| Button | Endpoint | What it does |
+|---|---|---|
+| **▶ Trigger dispatch** | `POST /trigger?limit=N` | Group the open issues and dispatch remediation for the top N packages |
+| **⚡ Simulate GitHub webhook** | `POST /simulate-webhook` | Fire a correctly HMAC-signed `issues.opened` event at `/webhook/github` — proves the event-driven path (signature check included) with no public tunnel |
+| **↻ Poll running sessions** | `POST /poll` | Refresh in-flight Devin sessions, pull back PR links + ACU |
+| **⟳ Refresh** | — | Re-fetch every table now (also auto-refreshes every 8s) |
+| **✕ Reset** | `POST /reset` | Clear the run ledger so you can demo again from a clean slate |
 
-This sends a properly HMAC-signed `issues.opened` payload to your local
-`/webhook/github`, exactly as GitHub would, so you can show the trigger firing
-live. Wiring a real GitHub webhook is a one-line config change (point it at a
-public URL for this service — e.g. an ngrok tunnel during the demo, or a
-deployed instance — and set the same `GITHUB_WEBHOOK_SECRET` on both sides).
+The page also lists the raw 17 open issues (linked to GitHub, with severity),
+the package groups they collapse into, the live run ledger, and the four Devin
+Automations (linked into the Devin app).
+
+Other endpoints, for scripting: `GET /healthz`, `GET /plan` (read-only preview),
+`GET /status` (JSON), `GET /automations`, `POST /webhook/github` (the real
+webhook target).
+
+### Wiring a real GitHub webhook
+
+The `⚡ Simulate GitHub webhook` button (or `scripts/simulate_webhook.py`) sends
+the exact signed payload GitHub would. To use a real webhook, point a GitHub
+webhook at this service's `/webhook/github` (via an ngrok tunnel during a demo,
+or a deployed instance) and set the same `GITHUB_WEBHOOK_SECRET` on both sides.
 
 ### Working through the existing issue backlog
 

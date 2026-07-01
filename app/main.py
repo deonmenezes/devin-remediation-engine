@@ -1,9 +1,11 @@
 import hashlib
 import hmac
+import json
 import logging
 
+import requests
 from fastapi import FastAPI, Request, HTTPException, Query
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -37,6 +39,11 @@ def _verify_signature(secret: str, body: bytes, signature_header: str) -> bool:
     expected = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
     provided = signature_header.split("=", 1)[1]
     return hmac.compare_digest(expected, provided)
+
+
+@app.get("/")
+def root():
+    return RedirectResponse(url="/dashboard")
 
 
 @app.get("/healthz")
@@ -80,10 +87,44 @@ def plan():
     return orchestrator.plan()
 
 
+@app.post("/simulate-webhook")
+def simulate_webhook():
+    """Fire a correctly-signed synthetic GitHub `issues.opened` event at our own
+    /webhook/github endpoint. This lets a reviewer demo the real event-driven
+    path from a dashboard button — signature verification and all — without
+    needing a public tunnel or a real GitHub webhook."""
+    payload = {
+        "action": "opened",
+        "issue": {
+            "number": 999999,
+            "title": "[security] SIMULATED: dashboard webhook button",
+            "labels": [{"name": config.GITHUB_ISSUE_LABEL}, {"name": "security"}],
+            "html_url": f"https://github.com/{config.GITHUB_REPO}/issues/999999",
+        },
+        "repository": {"full_name": config.GITHUB_REPO},
+    }
+    body = json.dumps(payload).encode()
+    headers = {"Content-Type": "application/json", "X-GitHub-Event": "issues"}
+    if config.GITHUB_WEBHOOK_SECRET:
+        sig = hmac.new(config.GITHUB_WEBHOOK_SECRET.encode(), body, hashlib.sha256).hexdigest()
+        headers["X-Hub-Signature-256"] = f"sha256={sig}"
+    resp = requests.post(
+        f"http://localhost:{config.PORT}/webhook/github", data=body, headers=headers, timeout=30
+    )
+    return {"webhook_status": resp.status_code, "result": resp.json()}
+
+
 @app.post("/poll")
 def manual_poll():
     updated = orchestrator.poll_running()
     return {"updated_run_ids": updated}
+
+
+@app.post("/reset")
+def reset():
+    """Clear the run ledger so a demo can start from a clean slate."""
+    deleted = store.clear_runs()
+    return {"cleared_runs": deleted}
 
 
 @app.get("/status")
@@ -91,9 +132,29 @@ def status():
     return JSONResponse({"summary": store.summary(), "runs": store.all_runs()})
 
 
+@app.get("/automations")
+def automations():
+    """Reference metadata for the Devin Automations configured in the dashboard
+    for this org. Devin has no public API to list/poll automations, so this is
+    static — it links out to the real thing rather than faking a live status."""
+    return {"automations": config.AUTOMATIONS}
+
+
 @app.get("/dashboard", response_class=HTMLResponse)
 def dashboard(request: Request):
     return templates.TemplateResponse(
         "dashboard.html",
-        {"request": request, "summary": store.summary(), "runs": store.all_runs(), "dry_run": config.DRY_RUN},
+        {
+            "request": request,
+            "summary": store.summary(),
+            "runs": store.all_runs(),
+            "plan": orchestrator.plan(),
+            "dry_run": config.DRY_RUN,
+            "default_limit": config.DISPATCH_LIMIT_PER_RUN,
+            "automations": config.AUTOMATIONS,
+            "repo": config.GITHUB_REPO,
+            "repo_url": f"https://github.com/{config.GITHUB_REPO}",
+            "issue_label": config.GITHUB_ISSUE_LABEL,
+            "max_acu": config.MAX_ACU_PER_SESSION,
+        },
     )

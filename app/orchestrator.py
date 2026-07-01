@@ -20,6 +20,12 @@ TITLE_RE = re.compile(
 
 NO_FIX_MARKERS = ("no fixed version", "no fix")
 
+# Pulls extra detail out of the issue body the advisory scan writes, e.g.:
+#   "- **Severity:** `medium`"
+#   "- **File:** `requirements/development.txt`"
+SEVERITY_RE = re.compile(r"\*\*Severity:\*\*\s*`?([\w-]+)`?", re.IGNORECASE)
+FILE_RE = re.compile(r"\*\*File:\*\*\s*`?([^`\n]+)`?", re.IGNORECASE)
+
 
 def parse_issue(issue):
     match = TITLE_RE.match(issue["title"].strip())
@@ -27,13 +33,19 @@ def parse_issue(issue):
         return None
     fixed = match.group("fixed").strip()
     has_fix = not any(marker in fixed.lower() for marker in NO_FIX_MARKERS)
+    body = issue.get("body") or ""
+    severity_match = SEVERITY_RE.search(body)
+    file_match = FILE_RE.search(body)
     return {
         "number": issue["number"],
+        "title": issue["title"],
         "advisory": match.group("advisory"),
         "package": match.group("package"),
         "current": match.group("current"),
         "fixed": fixed if has_fix else None,
         "has_fix": has_fix,
+        "severity": severity_match.group(1).lower() if severity_match else "unknown",
+        "file": file_match.group(1).strip() if file_match else None,
         "html_url": issue.get("html_url"),
     }
 
@@ -123,7 +135,13 @@ class Orchestrator:
         already = store.dispatched_packages()
         for g in groups:
             g["already_dispatched"] = g["package"] in already
-        return {"groups": groups, "unparsed_issue_numbers": unparsed, "total_issues": len(issues)}
+        parsed.sort(key=lambda p: p["number"], reverse=True)
+        return {
+            "groups": groups,
+            "issues": parsed,
+            "unparsed_issue_numbers": unparsed,
+            "total_issues": len(issues),
+        }
 
     def dispatch(self, limit=None):
         """Dispatch up to `limit` new (not-yet-dispatched) package groups.
