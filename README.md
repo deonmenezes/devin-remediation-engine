@@ -75,6 +75,12 @@ when something looks unsafe.
 > and the human hand-offs — is in **[`LOOP.md`](LOOP.md)** (Mermaid, renders on
 > GitHub) with a PNG export at [`loop.png`](loop.png).
 
+### The four automations, at a glance
+
+![The 4 Devin Automations](four-automations.png)
+
+*(Simple one-slide version — source SVG: [`four-automations.svg`](four-automations.svg).)*
+
 Key files:
 
 | File | Responsibility |
