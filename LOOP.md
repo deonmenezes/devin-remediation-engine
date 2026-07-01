@@ -6,7 +6,7 @@ Generated with the Codex CLI (`omc ask codex`), gpt-5.5. Renders natively on Git
 **Guard exits (the only times a human is touched):** no published fix, major-version bump, or an out-of-scope diff / failed `deps-verify`.
 
 ```mermaid
-flowchart TD
+flowchart LR
   subgraph DEVIN["Devin Automations - cloud"]
     PRIVATE["Private repo required"]
     DAILY["Periodic Advisory Scan<br/>daily"]
