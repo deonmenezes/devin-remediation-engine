@@ -5,23 +5,22 @@
 workflow problem end to end. Devin is the hero. Your code is the thin layer that puts Devin to work.
 
 **Two tabs open before you record:**
-1. `http://localhost:8000/dashboard` (mode says DRY RUN, freshly Reset so the table is empty)
+1. `http://localhost:8000/dashboard` (running live, freshly Reset so the table is empty)
 2. The Devin Automations page, plus a tab on the fork's Issues and Pull Requests.
 
 **Pre-flight checklist**
-- [ ] `docker compose up` running, dashboard loads, mode badge says DRY RUN.
+- [ ] `docker compose up` running live (`DRY_RUN=false`), dashboard loads.
 - [ ] Clicked Reset so the run ledger is empty.
-- [ ] Money shot ready: either flip `DRY_RUN=false` beforehand so Devin opens a real PR live,
-      or have a real Devin PR from an earlier run open in a tab.
+- [ ] Money shot ready: a Devin session mid-run, or a real Devin PR open in a tab.
 - [ ] Logged in on the GitHub tab and the Devin tab.
 
 ---
 
 ## 0:00 to 0:35 · WHAT (the problem a VP feels)
 
-> "Keeping dependencies secure is a treadmill. Something has to constantly scan every service
-> for known vulnerabilities, and then someone has to actually fix each one. Triage it, bump the
-> version, fix whatever breaks, run the tests, and open a pull request. Most teams bolt a scanner
+> "Keeping dependencies secure is a tedious process. Something has to constantly scan every
+> service for known vulnerabilities, and then someone has to actually fix each one. Remediate it,
+> bump the version, fix whatever breaks, run the tests, and open a pull request. Most teams bolt a scanner
 > like Dependabot onto the front, but that only does the finding. It still drops all of the fixing
 > on your engineers, one ticket at a time, forever. So instead of a scanner plus a room full of
 > people, I gave the whole job to Devin. Devin does the scanning, Devin writes the fixes, and Devin
@@ -39,10 +38,12 @@ workflow problem end to end. Devin is the hero. Your code is the thin layer that
 > anything vulnerable. It even catches a CVE that was just disclosed against code we have not
 > touched in months. That is stage one, and it is already Devin.
 >
-> From there Devin runs the rest of the loop. When a ticket appears, Devin picks it up, writes the
-> fix, and opens the pull request. When that pull request lands, a second Devin automation reviews
-> it and merges it, but only when it is safe. Devin does the scanning, the fixing, and the
-> reviewing. The small service in the middle just decides what to hand Devin and when."
+> From there, everything is event-based. These are event-driven automations, so nothing sits in a
+> loop polling and nothing waits on a human to notice. The moment a ticket is opened, that event
+> triggers Devin to pick it up, write the fix, and open the pull request. The moment that pull
+> request lands, that event triggers a second Devin automation to review it and merge it, but only
+> when it is safe. Devin does the scanning, the fixing, and the reviewing. The small service in the
+> middle just decides what to hand Devin and when."
 
 *[ON SCREEN: the Devin Automations page. Point to each automation as you name it.]*
 
@@ -65,17 +66,17 @@ workflow problem end to end. Devin is the hero. Your code is the thin layer that
 
 *[ON SCREEN: click Simulate GitHub webhook. Point at the action log.]*
 
-> "I just simulated GitHub telling us a new ticket was opened. It came in signed, we verified it,
-> and Devin was dispatched. You can see the work show up in the table, one row per package Devin
-> is now handling. In production this is a real GitHub webhook, so the moment a vulnerability is
-> filed, Devin starts on it. No one has to notice or assign it."
+> "This is the event-based trigger in action. I just simulated GitHub telling us a new ticket was
+> opened. It came in signed, we verified it, and Devin was dispatched. You can see the work show up
+> in the table, one row per package Devin is now handling. In production this is a real GitHub
+> webhook, so the moment a vulnerability is filed, that event starts Devin. No one has to notice or
+> assign it."
 
 **Guardrails, because Devin is writing real code and spending real budget.**
-> "A few things I want a VP to see. The badge says DRY RUN, which is the safe default. Nothing
-> real happens until I choose to go live. Every run is capped, so a flood of tickets can never
-> turn into runaway cost. And look at paramiko. There is no published fix for it yet, so instead
-> of forcing a broken upgrade, Devin is told to comment on the ticket, explain the blocker, and
-> stop. Devin knows when not to act."
+> "A couple of things I want a VP to see. Every run is capped, so a flood of tickets can never turn
+> into runaway cost. And look at paramiko. There is no published fix for it yet, so instead of
+> forcing a broken upgrade, Devin is told to comment on the ticket, explain the blocker, and stop.
+> Devin knows when not to act."
 
 **The money shot: Devin behind the scenes.**
 *[If live: open the Devin session that just started. Show it editing requirements, running the
