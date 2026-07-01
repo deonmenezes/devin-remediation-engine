@@ -1,149 +1,140 @@
 # Loom Script — Devin Dependency Remediation Engine (~5 min)
 
-**Audience:** VP of Engineering + senior ICs curious about Devin.
-**Goal:** Show a working, event-driven system that uses Devin as a core primitive to
-close the loop from "CVE disclosed" to "fix merged" — and make the case for why an
-autonomous coding agent is what makes it possible.
+**Audience:** a VP of Engineering and a few senior engineers who are evaluating Devin.
+**Framing:** you are a Forward Deployed Engineer showing how Devin solves a real, expensive
+workflow problem end to end. Devin is the hero. Your code is the thin layer that puts Devin to work.
 
-**Two tabs open before you hit record:**
-1. `http://localhost:8000/dashboard` (DRY RUN, freshly Reset — clean slate)
-2. `https://app.devin.ai/.../automations` (the 4 automations) — and a tab on the fork's Issues + Pull requests.
+**Two tabs open before you record:**
+1. `http://localhost:8000/dashboard` (mode says DRY RUN, freshly Reset so the table is empty)
+2. The Devin Automations page, plus a tab on the fork's Issues and Pull Requests.
 
 **Pre-flight checklist**
-- [ ] `docker compose up` running; dashboard loads; mode badge says DRY RUN.
-- [ ] Clicked **Reset** so the run ledger is empty.
-- [ ] Decide the "money shot": either flip `DRY_RUN=false` beforehand to open a *real* PR live,
-      or demo in DRY RUN and show a PR you opened in a prior live run. (Real PR is more convincing.)
-- [ ] GitHub tab logged in; Devin automations tab logged in.
+- [ ] `docker compose up` running, dashboard loads, mode badge says DRY RUN.
+- [ ] Clicked Reset so the run ledger is empty.
+- [ ] Money shot ready: either flip `DRY_RUN=false` beforehand so Devin opens a real PR live,
+      or have a real Devin PR from an earlier run open in a tab.
+- [ ] Logged in on the GitHub tab and the Devin tab.
 
 ---
 
-## 0:00 – 0:35 · WHAT — the problem
+## 0:00 to 0:35 · WHAT (the problem a VP feels)
 
-> "Every security scanner — Dependabot, pip-audit, Snyk — is really good at finding
-> vulnerable dependencies and really good at generating *work*. On a repo the size of
-> Apache Superset, that's a steady drip of 'upgrade this package' tickets that a human
-> has to triage, bump, test, and open a PR for — one at a time, forever.
+> "Every security scanner your team runs, Dependabot, Snyk, pip-audit, is great at one thing:
+> finding vulnerable dependencies and turning them into tickets. On a codebase the size of
+> Apache Superset that becomes a constant stream of 'upgrade this package' work. Someone has
+> to triage each one, bump the version, fix whatever breaks, run the tests, and open a pull
+> request. Finding the problem is cheap. Fixing it is where your engineers actually burn hours.
+> So I pointed Devin at that bottleneck. The goal is simple: take a backlog of security tickets
+> and turn it into reviewed, merged pull requests, with Devin doing the engineering and a person
+> stepping in only when something genuinely needs judgment."
+
+*[ON SCREEN: the fork's Issues tab, 17 security tickets, each a CVE.]*
+
+---
+
+## 0:35 to 1:15 · THE SETUP (Devin doing the whole loop)
+
+> "Here is the fork. Devin already scanned it and filed these 17 security tickets. That is the
+> first thing Devin is doing for me, running as a scheduled automation that just watches for new
+> vulnerabilities and reports them.
 >
-> The finding is the easy part. The *fix* is the bottleneck. That's the workflow I'm
-> automating: turning a backlog of CVE issues into reviewed, merged pull requests — with
-> Devin doing the actual engineering, and a human only in the loop when something looks unsafe."
+> From there I have Devin run the entire remediation loop. One Devin automation finds the
+> vulnerabilities. When a ticket appears, Devin picks it up, writes the fix, and opens the pull
+> request. And when that pull request lands, a second Devin automation reviews it and merges it,
+> but only when it is safe. Devin is doing the finding, the fixing, and the reviewing. The small
+> service in the middle just decides what to hand Devin and when."
 
-*[ON SCREEN: the fork's Issues tab — 17 `devin-remediate` issues, each an [security] CVE title.]*
+*[ON SCREEN: the Devin Automations page. Point to each automation as you name it.]*
 
 ---
 
-## 0:35 – 1:15 · THE SETUP — a closed loop, not a script
+## 1:15 to 3:15 · HOW (see Devin work, and the one decision that matters)
 
-> "Here's the fork of Superset. A scheduled Devin automation scanned its dependencies and
-> filed these 17 CVE issues — pip, starlette, flask, and so on. Detection only; it never
-> touches code.
+*[ON SCREEN: switch to the dashboard.]*
+
+> "This dashboard is mission control. It reads the live backlog straight from GitHub. Seventeen
+> tickets, and notice they collapse into seven pieces of work. That is the one design decision
+> worth calling out."
+
+**The grouping decision, in plain terms.**
+> "Two of these tickets both say 'upgrade starlette', just for different CVEs. If I sent Devin
+> after each ticket separately, I would get two pull requests editing the same line, and they
+> would fight each other. So I group the tickets by package and give Devin one clear job per
+> package: upgrade it once, to the version that clears every CVE, and close all of those tickets
+> in a single pull request. Seventeen tickets become seven clean pull requests."
+
+*[ON SCREEN: click Simulate GitHub webhook. Point at the action log.]*
+
+> "I just simulated GitHub telling us a new ticket was opened. It came in signed, we verified it,
+> and Devin was dispatched. You can see the work show up in the table, one row per package Devin
+> is now handling. In production this is a real GitHub webhook, so the moment a vulnerability is
+> filed, Devin starts on it. No one has to notice or assign it."
+
+**Guardrails, because Devin is writing real code and spending real budget.**
+> "A few things I want a VP to see. The badge says DRY RUN, which is the safe default. Nothing
+> real happens until I choose to go live. Every run is capped, so a flood of tickets can never
+> turn into runaway cost. And look at paramiko. There is no published fix for it yet, so instead
+> of forcing a broken upgrade, Devin is told to comment on the ticket, explain the blocker, and
+> stop. Devin knows when not to act."
+
+**The money shot: Devin behind the scenes.**
+*[If live: open the Devin session that just started. Show it editing requirements, running the
+tests, and opening the PR that says Closes #75 #74 #73…]*
+> "This is Devin actually doing the work. It reads the ticket, upgrades the dependency, runs the
+> test suite, and opens a pull request that closes all five starlette tickets at once. I want to
+> be clear: I did not write the fix. I wrote Devin's instructions and its guardrails. Devin wrote
+> and verified the code."
+
+*[ON SCREEN: click Generate report.]*
+
+> "And this is how a leader knows it is working without reading every pull request. Open
+> vulnerabilities, pull requests opened, tickets closed, budget spent, success rate, on one page.
+> You can export it to your team channel or your dashboards. It will even call your phone and read
+> the status out loud."
+
+---
+
+## 3:15 to 4:10 · WHY (why this only works with Devin)
+
+> "The fair question is: why does this need Devin, instead of a Dependabot rule or a script?
+> Because bumping a version number is the easy part. The hard part is everything after. The
+> upgrade breaks an import, so something has to go fix the callers. The lockfile has to be
+> recompiled, not hand-edited. A test fails, and someone has to read it and decide whether it is
+> related or safe to ship. A script cannot do any of that. It changes a number and hands the real
+> work back to a human. That is exactly why Dependabot pull requests pile up unmerged.
 >
-> I built four Devin automations that form a closed loop, plus a service that orchestrates
-> the middle. Stage one *finds* — it files these issues. Stage two, my engine, *groups and
-> dispatches*. Stage three, a Devin session, *fixes* — opens the PR. Stage four, another
-> Devin automation, *reviews and merges* — but only if it's safe."
-
-*[ON SCREEN: the Devin Automations page — point at the four: Periodic Advisory Scan,
-Dependency Vulnerability (Push), Dependency Issue Fix, Dependency PR Auto-Review & Merge.]*
-
-> "The point: this isn't one prompt. It's an event-driven system where Devin is the
-> primitive doing the work at three of the four stages."
+> Devin is what closes that gap, because Devin behaves like an engineer. It reads the failure,
+> makes the fix, and knows when it is out of its depth and should ask. That is what turns this
+> from a tool that creates more work into a loop that actually finishes the work. And the review
+> step keeps it safe, because Devin only merges when the change is scoped to the upgrade and the
+> tests are green."
 
 ---
 
-## 1:15 – 3:15 · HOW — live demo + the architecture decisions
+## 4:10 to 4:50 · WHEN (where we take it next)
 
-*[ON SCREEN: switch to the dashboard — the Control Room.]*
-
-> "This is the control room for the middle of that loop — a Dockerized FastAPI service.
-> Up top is the pipeline. Below it, the live backlog: 17 issues collapsed into 7 package
-> groups. And that first decision is the important one."
-
-**Decision 1 — group by package.**
-> "Two issues both say 'upgrade starlette' but cite different CVEs. If I fixed issues
-> one-to-one, I'd get two PRs editing the same line of requirements — a merge conflict I
-> created myself. So the orchestrator groups by package, takes the *highest* fix version
-> that satisfies all of them, and asks Devin for *one* PR that closes the whole group.
-> Seventeen issues, seven PRs."
-
-*[ON SCREEN: click **Simulate GitHub webhook**. Action log shows 'Webhook 200 · signature verified · dispatched…'.]*
-
-**Decision 2 — it's genuinely event-driven.**
-> "That button fired a real, HMAC-signed `issues.opened` event at my webhook endpoint —
-> signature verified, exactly like GitHub would send. In production a GitHub webhook hits
-> the same route. The runs table just filled in — one row per package Devin is now working."
-
-**Decision 3 — safety rails, because this spends money and writes code.**
-> "Notice the mode badge says DRY RUN — that's the default. The full pipeline runs, but no
-> real Devin session starts and no PR opens until I explicitly go live. Every dispatch is
-> capped: N packages per trigger, a hard ACU ceiling per session. And `paramiko` has no
-> published fix — so instead of forcing a broken upgrade, the agent is told to comment the
-> blocker and stop. You can see it flagged right here."
-
-*[ON SCREEN: point at paramiko → 'no fix published' in the Package Groups table.]*
-
-**The money shot — Devin behind the scenes.**
-*[If live: switch to the Devin session that just opened; show it editing requirements, running tests, opening the PR. Then the GitHub PR with `Closes #75 #74 #73…`.]*
-> "Here's Devin actually doing it: reading the issue, upgrading the pin, running the test
-> suite, and opening a PR that closes all five starlette issues at once. My code never wrote
-> a line of the fix — it wrote the *instructions and the guardrails*. Devin wrote the fix."
-
-*[ON SCREEN: click **Generate report**.]*
-
-**Observability — how a leader knows it's working.**
-> "And this is the answer to 'how would I, as an eng leader, know this is working?' —
-> a one-page executive report: open CVEs, PRs opened, issues closed, ACU spent, success rate.
-> Exportable to Markdown for Slack, JSON for a BI pipeline, or PDF. There's even a 'call me'
-> button — it'll phone you and read the status out loud."
+> "In a real rollout with your team, this grows quickly. It is not tied to Python, so the same
+> pattern covers your npm, Go, and Java services across every repo. You set the risk policy, so
+> Devin can auto-merge low-risk patches and route the bigger upgrades to a human for approval.
+> The tickets Devin flags as blocked become a clean triage queue, so your engineers only ever
+> look at the genuinely hard cases. And it plugs into your stack, a Slack note on every merge,
+> the data feeding your dashboards, and an alert if a critical vulnerability is not fixed in time."
 
 ---
 
-## 3:15 – 4:10 · WHY — why this needs an autonomous agent
+## 4:50 to 5:00 · CLOSE
 
-> "Here's the honest question: why Devin, and not a Dependabot rule or a shell script?
->
-> Because a version bump is the *easy* 20%. The other 80% is judgment: this upgrade broke an
-> import — patch the two call sites. The lockfile needs recompiling, not hand-editing. The
-> test suite fails for a reason unrelated to my change — is it safe anyway? A script can bump
-> a number. It can't *read the failure, decide, and adapt*. Dependabot opens the PR and then
-> stops at exactly the hard part — a human still has to make it green.
->
-> Devin closes that gap. It's not a smarter regex; it's an engineer that reads the diff, runs
-> the tests, fixes the fallout, and knows when to stop and ask. That's what makes a *closed*
-> loop possible instead of a loop that always dead-ends on a person. And the auto-merge stage
-> only merges when the diff is scoped to the bump and CI is green — so autonomy never means
-> reckless."
-
----
-
-## 4:10 – 4:50 · WHEN — extending this in a real engagement
-
-> "In a real customer engagement, this generalizes fast:
->
-> - **Multi-repo, multi-ecosystem** — the grouping and prompt logic isn't pip-specific; swap
->   the issue parser and it covers npm, cargo, go modules across a whole org.
-> - **Policy-aware autonomy** — auto-merge low-risk patch bumps on green CI; require human
->   review for majors. The dial between 'agent proposes' and 'agent ships' is a config value.
-> - **Route the hard ones to humans** — when Devin comments a blocker, that becomes a triage
->   queue, so engineers only see the genuinely ambiguous cases.
-> - **Plug into the real stack** — Slack alerts on merge, the ledger into Datadog, a severity
->   SLA that pages if a critical CVE isn't merged within N hours."
-
----
-
-## 4:50 – 5:00 · CLOSE
-
-> "So: a scanner finds it, my engine groups and dispatches it, Devin fixes and opens the PR,
-> and a second agent reviews and merges it — a security backlog that drains itself, with
-> people focused only on the calls that actually need a human. That's Devin as a core
-> primitive, not a helper. Thanks for watching."
+> "So Devin finds the vulnerability, Devin writes and opens the fix, and Devin reviews and merges
+> it. A security backlog that clears itself, with your engineers spending their time only on the
+> decisions that actually need a person. That is Devin as the engine, not an assistant. Thanks for
+> watching."
 
 ---
 
 ### Delivery notes
-- ~720 spoken words → lands near 5:00 with demo pauses. If short on time, trim the WHEN bullets to two.
-- Keep the cursor moving to what you're describing; silence during clicks is fine — let the UI talk.
-- If demoing fully live, flip `DRY_RUN=false`, recreate the container, and pre-open one Devin session
-  so the "behind the scenes" moment is instant rather than a wait.
-- Fallback if a live session is slow: narrate over a PR + Devin session from an earlier live run.
+- Around 720 spoken words. With demo pauses it lands near five minutes.
+- Say "Devin" out loud often. The VP should leave remembering Devin did the work.
+- Let the screen carry the clicks. A short silence while the UI updates is fine.
+- For the strongest version, go fully live: flip `DRY_RUN=false`, recreate the container, and have
+  one Devin session already opened so the behind-the-scenes moment is instant instead of a wait.
+- If a live session is slow, narrate over a real Devin pull request from an earlier run.
