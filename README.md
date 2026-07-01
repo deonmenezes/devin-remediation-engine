@@ -71,6 +71,10 @@ stages 2–3 (and the deps-verify gate) are this Dockerized service. Together th
 close the loop from "CVE disclosed" to "fix merged" with a human only in the loop
 when something looks unsafe.
 
+> 📈 A rendered, color-coded flowchart of the full loop — including every guard
+> and the human hand-offs — is in **[`LOOP.md`](LOOP.md)** (Mermaid, renders on
+> GitHub) with a PNG export at [`loop.png`](loop.png).
+
 Key files:
 
 | File | Responsibility |
