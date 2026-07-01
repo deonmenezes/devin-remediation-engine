@@ -85,8 +85,22 @@ def reconcile_pr_checks(gh, dry_run):
     PR to ready-for-review, since draft PRs can't be merged.
     """
     results = []
-    for pr in gh.list_open_pulls():
-        state, description, changed = evaluate_pr(gh, pr)
+    try:
+        pulls = gh.list_open_pulls()
+    except Exception as exc:  # noqa: BLE001 - never let a rate limit crash the loop
+        log.warning("reconcile: could not list PRs (%s)", exc)
+        return results
+    for pr in pulls:
+        # Only gate Devin's remediation PRs. Skipping everything else (Dependabot
+        # bumps, etc.) BEFORE any per-PR API call keeps usage tiny and avoids the
+        # GitHub rate limit that a 30s scan over dozens of PRs would otherwise hit.
+        if not (pr.get("title") or "").lower().startswith("security: upgrade"):
+            continue
+        try:
+            state, description, changed = evaluate_pr(gh, pr)
+        except Exception as exc:  # noqa: BLE001
+            log.warning("reconcile: evaluate pr#%s failed (%s)", pr.get("number"), exc)
+            continue
         if state is None:
             continue
         sha = pr["head"]["sha"]
