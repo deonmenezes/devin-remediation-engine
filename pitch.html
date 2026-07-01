@@ -58,6 +58,19 @@
   .stat .n.g{color:var(--green)} .stat .n.a{color:var(--amber)}
   .stat .l{font-size:19px; color:var(--slate); margin-top:6px; line-height:1.3}
 
+  /* comparison table */
+  .cmp{width:100%; border-collapse:separate; border-spacing:0; margin-top:14px; font-size:19px}
+  .cmp th,.cmp td{padding:9px 14px; text-align:center; border-bottom:1px solid var(--line); vertical-align:middle}
+  .cmp th{font-size:14px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); font-weight:700; line-height:1.25}
+  .cmp .feat{text-align:left; color:var(--ink); font-weight:600; width:36%; font-size:19px}
+  .cmp th.devin,.cmp td.devin{background:var(--green-050)}
+  .cmp th.devin{color:var(--green); font-size:19px; font-weight:800}
+  .cmp .yes{color:var(--green); font-weight:800; font-size:23px}
+  .cmp .no{color:var(--muted); font-weight:800; font-size:21px}
+  .cmp .part{color:var(--amber); font-weight:800; font-size:21px}
+  .cmp small{display:block; font-size:13px; font-weight:500; color:var(--muted); margin-top:3px; letter-spacing:0; text-transform:none}
+  .cmp tr:last-child td{border-bottom:none}
+
   .foot{position:absolute; left:72px; right:72px; bottom:26px; display:flex;
     justify-content:space-between; align-items:center; font-size:15px; color:var(--muted);
     border-top:1px solid var(--line); padding-top:14px}
@@ -174,6 +187,46 @@
     <div class="foot"><span class="brand">Autonomous Dependency Security</span><span>7</span></div>
   </section>
 
+  <!-- 8 · COMPARISON TABLE -->
+  <section class="slide">
+    <span class="accent g"></span>
+    <span class="kicker g">Why · Devin vs the alternatives</span>
+    <h2 style="font-size:31px; margin-top:8px; margin-bottom:0; max-width:32ch">Does what bots can’t. Cheaper than rolling your own.</h2>
+    <table class="cmp">
+      <tr>
+        <th class="feat"></th>
+        <th>Dependabot /<br>Renovate</th>
+        <th>DIY frontier<br>model</th>
+        <th class="devin">Devin</th>
+      </tr>
+      <tr>
+        <td class="feat">Opens a dependency-bump PR</td>
+        <td class="yes">✓</td><td class="yes">✓</td><td class="devin yes">✓</td>
+      </tr>
+      <tr>
+        <td class="feat">Resolves conflicts, regenerates lockfiles</td>
+        <td class="no">✗</td><td class="part">~<small>if you build it</small></td><td class="devin yes">✓</td>
+      </tr>
+      <tr>
+        <td class="feat">Fixes breaking APIs &amp; failing tests</td>
+        <td class="no">✗</td><td class="part">~<small>hit or miss</small></td><td class="devin yes">✓</td>
+      </tr>
+      <tr>
+        <td class="feat">Built-in harness: sandbox, tools, GitHub-event triggers, PR review</td>
+        <td class="part">~<small>partial</small></td><td class="no">✗<small>you build + run it</small></td><td class="devin yes">✓</td>
+      </tr>
+      <tr>
+        <td class="feat">Stops when a fix isn’t safe</td>
+        <td class="no">✗<small>rules only</small></td><td class="part">~<small>prompt-dependent</small></td><td class="devin yes">✓</td>
+      </tr>
+      <tr>
+        <td class="feat">Cost &amp; effort to operate</td>
+        <td>Free,<br>but shallow</td><td>Premium tokens +<br>eng time to build</td><td class="devin"><b>Lower cost per<br>solved ticket</b></td>
+      </tr>
+    </table>
+    <div class="foot"><span class="brand">Autonomous Dependency Security</span><span>8</span></div>
+  </section>
+
   <!-- 7 · PROOF -->
   <section class="slide">
     <span class="accent g"></span>
@@ -185,7 +238,7 @@
       <div class="stat"><div class="n">0</div><div class="l">un-verified merges - every PR gated by deps-verify</div></div>
       <div class="stat"><div class="n">4</div><div class="l">Devin automations, chained into one closed loop</div></div>
     </div>
-    <div class="foot"><span class="brand">Autonomous Dependency Security</span><span>8</span></div>
+    <div class="foot"><span class="brand">Autonomous Dependency Security</span><span>9</span></div>
   </section>
 
   <!-- 8 · WHEN / NEXT -->
@@ -200,7 +253,7 @@
       <li class="a"><b>Per-team policy</b>: auto-merge patches, review minors, escalate majors</li>
       <li class="a">One source of truth - <b>Postgres + a metrics backend</b> as volume grows</li>
     </ul>
-    <div class="foot"><span class="brand">Autonomous Dependency Security</span><span>9</span></div>
+    <div class="foot"><span class="brand">Autonomous Dependency Security</span><span>10</span></div>
   </section>
 
   <!-- 9 · CLOSE -->
