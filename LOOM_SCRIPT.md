@@ -1,4 +1,4 @@
-# Loom Script — Devin Dependency Remediation Engine (~5 min)
+# Loom Script: Devin Dependency Remediation Engine (~5 min)
 
 **Audience:** a VP of Engineering and a few senior engineers who are evaluating Devin.
 **Framing:** you are a Forward Deployed Engineer showing how Devin solves a real, expensive
