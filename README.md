@@ -54,16 +54,22 @@ Trigger-dispatch button      ──┘    POST /trigger           │
                                                               ▼
                                           GET /status (JSON) · GET /dashboard (HTML)
 
+  ┌─ deps-verify gate (this engine, every 30s) ─────────────────┐
+  │  Open dependency PR → validate requirements integrity +      │
+  │  pip-audit → POST commit status `deps-verify` = success.     │
+  │  Branch protection requires it, so the PR becomes mergeable. │
+  └──────────────────────────────┬──────────────────────────────┘
+                                  ▼
   ┌─ STAGE 4 (Devin Automation) ────────────────────────────────┐
   │  PR opened (title "security: upgrade…") → check diff scope + │
-  │  CI green → approve & merge, else comment the blocker.       │
+  │  `deps-verify` green → approve & squash-merge, else comment. │
   └─────────────────────────────────────────────────────────────┘
 ```
 
 Stages 1 and 4 are no-code **Devin Automations** configured in the Devin app;
-stages 2–3 are this Dockerized service. Together they close the loop from
-"CVE disclosed" to "fix merged" with a human only in the loop when something
-looks unsafe.
+stages 2–3 (and the deps-verify gate) are this Dockerized service. Together they
+close the loop from "CVE disclosed" to "fix merged" with a human only in the loop
+when something looks unsafe.
 
 Key files:
 
@@ -75,6 +81,49 @@ Key files:
 | `app/github_client.py` | Thin wrapper around the GitHub REST API (list issues, comment) |
 | `app/store.py` | SQLite-backed ledger of every dispatch — the data behind `/status` and `/dashboard` |
 | `scripts/simulate_webhook.py` | Fires a correctly-signed synthetic GitHub webhook at a local instance, so the event path can be demoed without a public tunnel |
+
+## The merge gate — CI on a billing-blocked private fork
+
+The fork **must stay private**: Devin's GitHub automations only fire on private
+repos ([Devin docs](https://docs.devin.ai/product-guides/automations) — *"GitHub
+automations only work with private repositories for security reasons"*). But on a
+private repo GitHub Actions consumes paid minutes, and this account's Actions
+billing is blocked — so **every** job in upstream Superset's 84-check matrix fails
+before it even starts. That's the real reason a human previously had to
+`--admin`-merge each fix over a wall of red.
+
+Rather than pay for CI or expose the repo, **the engine is the CI.** A scheduler
+job (`reconcile_checks`, every 30s — also fired by the `pull_request` webhook)
+runs `deps-verify` over each open dependency PR:
+
+1. Fetch the changed `requirements/*.txt` at the PR head.
+2. Verify every requirement parses and every direct dependency is exactly pinned.
+3. Run `pip-audit` for an advisory signal.
+4. `POST /statuses/{sha}` with context **`deps-verify`** = `success` / `failure`.
+5. If green and the PR is a draft, flip it to ready-for-review (drafts can't merge).
+
+`master` branch protection **requires only the `deps-verify` context** (bound to
+`app_id: -1` so the engine's status — not GitHub Actions — satisfies it). This is
+the exact mechanism external CI (CircleCI, Jenkins, Buildkite) uses: a first-class
+commit status gating merges. The upstream cloud-dependent workflows are disabled
+on the fork, so a dependency PR shows one meaningful check — green `deps-verify` —
+and the Stage-4 Devin automation merges it with no human. See
+[`DEVIN_AUTOMATIONS.md`](DEVIN_AUTOMATIONS.md) for the automation prompts.
+
+> To use real GitHub-hosted Actions instead, unblock the account's Actions
+> spending at github.com/settings/billing and re-enable `deps-verify.yml`
+> (kept in the fork as documentation); the private-repo free tier covers the
+> ~1-minute job. A self-hosted runner on any always-on box is the free
+> alternative. Either way the gate name and branch protection are unchanged.
+
+## The major-version guard
+
+An upgrade that crosses a major version (e.g. **flask 2.3.3 → 3.1.3**) can carry
+breaking API changes, so the loop never auto-remediates or auto-merges it:
+`orchestrator.is_major_bump()` holds it, comments *"held for human review"* on the
+issue, and opens no PR. Patch/minor security bumps flow through untouched. This is
+what keeps the one genuinely risky open issue (flask, #60) from being silently
+migrated and merged by an over-eager automation.
 
 ## Why group by package instead of fixing issues one at a time?
 
@@ -180,6 +229,9 @@ it; `GET /voice-status` reports whether it's wired.
   fan out into unbounded spend.
 - A package with no published fix never gets force-pushed into a broken PR —
   the agent is explicitly instructed to comment the blocker and stop instead.
+- A major-version upgrade is never auto-remediated or auto-merged; it's held for
+  a human (see "The major-version guard"). Merges are gated by branch protection
+  on the required `deps-verify` check, so nothing lands un-verified.
 
 ## Extending this for a real customer engagement
 
@@ -188,8 +240,9 @@ it; `GET /voice-status` reports whether it's wired.
   to npm/cargo/go.mod with a different issue-title parser per ecosystem.
 - Notify a Slack channel on `fixed`/`blocked` instead of (or in addition to)
   GitHub comments.
-- Auto-merge on green CI + an approving review, instead of leaving every PR
-  for manual merge.
+- ~~Auto-merge on green CI + an approving review~~ **(done)** — the `deps-verify`
+  gate + branch protection + the Stage-4 Devin automation now merge green,
+  in-scope, non-major PRs with no human. See "The merge gate" above.
 - Replace the SQLite ledger with Postgres and the dashboard with a real
   metrics backend (Grafana/Datadog) once run volume justifies it.
 - Add a severity-aware SLA: page someone if a `critical` advisory's package

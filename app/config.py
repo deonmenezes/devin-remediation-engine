@@ -80,8 +80,10 @@ AUTOMATIONS = [
         "trigger": "GitHub pull request opened in deonmenezes/superset, title starts with \"security: upgrade\"",
         "purpose": (
             "Closes the loop: checks the PR diff is scoped to only the dependency bump it claims, "
-            "waits for CI to go green, then approves and merges. If scope is unexpected or a required "
-            "check fails, it comments the blocker and leaves the PR unmerged for a human instead."
+            "waits for the required `deps-verify` status check to go green (posted by this engine, "
+            "since GitHub Actions can't run on the billing-blocked private fork), then approves and "
+            "squash-merges. If scope is unexpected or deps-verify fails, it comments the blocker and "
+            "leaves the PR unmerged for a human instead."
         ),
         "automation_id": "4ca315ef46a6416091482578c986fa84",
     },

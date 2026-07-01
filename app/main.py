@@ -25,6 +25,14 @@ orchestrator = Orchestrator()
 
 _scheduler = BackgroundScheduler()
 _scheduler.add_job(lambda: orchestrator.poll_running(), "interval", seconds=config.POLL_INTERVAL_SECONDS, id="poll")
+# The deps-verify merge gate: the engine is the CI on this billing-blocked
+# private fork, so it reconciles commit statuses on open dependency PRs.
+_scheduler.add_job(
+    lambda: orchestrator.reconcile_checks(),
+    "interval",
+    seconds=config.POLL_INTERVAL_SECONDS,
+    id="reconcile_checks",
+)
 if config.RESCAN_INTERVAL_SECONDS > 0:
     _scheduler.add_job(
         lambda: orchestrator.dispatch(),
@@ -64,6 +72,12 @@ async def github_webhook(request: Request):
 
     event = request.headers.get("X-GitHub-Event", "")
     payload = await request.json()
+
+    # A new/opened PR (e.g. one Devin just opened) — run the deps-verify gate on it.
+    if event == "pull_request" and payload.get("action") in ("opened", "reopened", "synchronize", "ready_for_review"):
+        log.info("webhook received event=pull_request action=%s — reconciling checks", payload.get("action"))
+        reconciled = orchestrator.reconcile_checks()
+        return {"event": event, "reconciled": reconciled}
 
     interesting = event == "issues" and payload.get("action") in ("opened", "labeled")
     interesting = interesting or (event == "push")
@@ -120,6 +134,14 @@ def simulate_webhook():
 def manual_poll():
     updated = orchestrator.poll_running()
     return {"updated_run_ids": updated}
+
+
+@app.post("/reconcile-checks")
+def manual_reconcile_checks():
+    """Run the deps-verify merge gate over open dependency PRs now and report
+    each commit status the engine posted. This is the fork's CI: it replaces the
+    upstream Actions matrix that can't run on a billing-blocked private repo."""
+    return {"reconciled": orchestrator.reconcile_checks()}
 
 
 @app.post("/reset")

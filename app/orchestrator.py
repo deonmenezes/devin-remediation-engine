@@ -3,7 +3,7 @@ import logging
 
 from packaging.version import Version, InvalidVersion
 
-from . import config, store
+from . import checks, config, store
 from .devin_client import DevinClient
 from .github_client import GitHubClient
 
@@ -58,6 +58,21 @@ def _higher_version(a, b):
         return a if a >= b else b
 
 
+def is_major_bump(current, fixed):
+    """True if `fixed` crosses a major version boundary above `current`.
+
+    Major upgrades (e.g. flask 2.x -> 3.x) can carry breaking API changes and
+    are not safe to remediate and auto-merge unattended, so the loop holds them
+    for a human instead of opening a PR. Unparseable versions are treated as
+    non-major (fail open to the normal, safer patch/minor path)."""
+    if not current or not fixed:
+        return False
+    try:
+        return Version(fixed).major > Version(current).major
+    except InvalidVersion:
+        return False
+
+
 def group_by_package(parsed_issues):
     """Collapse parsed issues into one remediation unit per package, picking
     the highest fix version so a package is only upgraded once."""
@@ -66,10 +81,21 @@ def group_by_package(parsed_issues):
         pkg = item["package"]
         group = groups.setdefault(
             pkg,
-            {"package": pkg, "fixed": None, "issues": [], "advisories": [], "has_fix": item["has_fix"]},
+            {
+                "package": pkg,
+                "current": item["current"],
+                "fixed": None,
+                "issues": [],
+                "advisories": [],
+                "has_fix": item["has_fix"],
+            },
         )
         group["issues"].append(item["number"])
         group["advisories"].append(item["advisory"])
+        # Keep the lowest current pin seen — the most conservative baseline for
+        # deciding whether the fix is a major-version jump.
+        if item["current"] and _higher_version(group["current"], item["current"]) == group["current"]:
+            group["current"] = item["current"]
         if item["has_fix"]:
             group["has_fix"] = True
             group["fixed"] = item["fixed"] if group["fixed"] is None else _higher_version(group["fixed"], item["fixed"])
@@ -117,6 +143,18 @@ def build_no_fix_comment(group):
         f"No fixed version has been published yet for `{group['package']}` "
         f"({advisories}). Leaving this open — the periodic advisory scan will "
         f"pick it up automatically once a fix is released. No PR opened."
+    )
+
+
+def build_major_bump_comment(group):
+    advisories = ", ".join(sorted(set(group["advisories"])))
+    return (
+        f"**Automated remediation status: held for human review**\n\n"
+        f"The published fix upgrades `{group['package']}` from `{group['current']}` to "
+        f"`{group['fixed']}` ({advisories}), which crosses a **major version boundary** and "
+        f"can include breaking API changes. This loop only auto-remediates and merges "
+        f"patch/minor security bumps, so this one is intentionally left open for a maintainer "
+        f"to review and migrate deliberately. No PR opened."
     )
 
 
@@ -169,6 +207,23 @@ class Orchestrator:
                 dispatched.append(record)
                 continue
 
+            if is_major_bump(group["current"], group["fixed"]):
+                # Safety gate: never auto-open/auto-merge a major-version upgrade.
+                if not self.dry_run:
+                    for n in group["issues"]:
+                        self.gh.comment_on_issue(n, build_major_bump_comment(group))
+                record = store.record_run(
+                    package=group["package"],
+                    issue_numbers=group["issues"],
+                    advisories=group["advisories"],
+                    session_id=None,
+                    status="skipped_major",
+                    dry_run=self.dry_run,
+                )
+                dispatched.append(record)
+                log.info("held major bump package=%s %s->%s", group["package"], group["current"], group["fixed"])
+                continue
+
             prompt = build_prompt(group, self.gh.repo)
             title = f"security: upgrade {group['package']} to {group['fixed']}"
             if self.dry_run:
@@ -196,6 +251,12 @@ class Orchestrator:
             log.info("dispatched package=%s issues=%s status=%s", group["package"], group["issues"], status)
 
         return dispatched
+
+    def reconcile_checks(self):
+        """Run the deps-verify merge gate over open dependency PRs and report the
+        result as a GitHub commit status (external CI, since Actions can't run on
+        this billing-blocked private fork). Idempotent; safe on a scheduler."""
+        return checks.reconcile_pr_checks(self.gh, self.dry_run)
 
     def poll_running(self):
         """Refresh status for every run still in-flight. Safe to call repeatedly
