@@ -19,14 +19,13 @@ workflow problem end to end. Devin is the hero. Your code is the thin layer that
 
 ## 0:00 to 0:35 · WHAT (the problem a VP feels)
 
-> "Every security scanner your team runs, Dependabot, Snyk, pip-audit, is great at one thing:
-> finding vulnerable dependencies and turning them into tickets. On a codebase the size of
-> Apache Superset that becomes a constant stream of 'upgrade this package' work. Someone has
-> to triage each one, bump the version, fix whatever breaks, run the tests, and open a pull
-> request. Finding the problem is cheap. Fixing it is where your engineers actually burn hours.
-> So I pointed Devin at that bottleneck. The goal is simple: take a backlog of security tickets
-> and turn it into reviewed, merged pull requests, with Devin doing the engineering and a person
-> stepping in only when something genuinely needs judgment."
+> "Keeping dependencies secure is a treadmill. Something has to constantly scan every service
+> for known vulnerabilities, and then someone has to actually fix each one. Triage it, bump the
+> version, fix whatever breaks, run the tests, and open a pull request. Most teams bolt a scanner
+> like Dependabot onto the front, but that only does the finding. It still drops all of the fixing
+> on your engineers, one ticket at a time, forever. So instead of a scanner plus a room full of
+> people, I gave the whole job to Devin. Devin does the scanning, Devin writes the fixes, and Devin
+> reviews and merges them. A person only steps in when something genuinely needs judgment."
 
 *[ON SCREEN: the fork's Issues tab, 17 security tickets, each a CVE.]*
 
@@ -34,15 +33,16 @@ workflow problem end to end. Devin is the hero. Your code is the thin layer that
 
 ## 0:35 to 1:15 · THE SETUP (Devin doing the whole loop)
 
-> "Here is the fork. Devin already scanned it and filed these 17 security tickets. That is the
-> first thing Devin is doing for me, running as a scheduled automation that just watches for new
-> vulnerabilities and reports them.
+> "Here is the fork. These 17 security tickets were not filed by a human or a third-party tool.
+> Devin filed them. I have Devin running on a schedule as the scanner. Every day it audits the
+> dependencies, checks them against the latest published advisories, and opens a ticket for
+> anything vulnerable. It even catches a CVE that was just disclosed against code we have not
+> touched in months. That is stage one, and it is already Devin.
 >
-> From there I have Devin run the entire remediation loop. One Devin automation finds the
-> vulnerabilities. When a ticket appears, Devin picks it up, writes the fix, and opens the pull
-> request. And when that pull request lands, a second Devin automation reviews it and merges it,
-> but only when it is safe. Devin is doing the finding, the fixing, and the reviewing. The small
-> service in the middle just decides what to hand Devin and when."
+> From there Devin runs the rest of the loop. When a ticket appears, Devin picks it up, writes the
+> fix, and opens the pull request. When that pull request lands, a second Devin automation reviews
+> it and merges it, but only when it is safe. Devin does the scanning, the fixing, and the
+> reviewing. The small service in the middle just decides what to hand Devin and when."
 
 *[ON SCREEN: the Devin Automations page. Point to each automation as you name it.]*
 
@@ -124,10 +124,10 @@ tests, and opening the PR that says Closes #75 #74 #73…]*
 
 ## 4:50 to 5:00 · CLOSE
 
-> "So Devin finds the vulnerability, Devin writes and opens the fix, and Devin reviews and merges
-> it. A security backlog that clears itself, with your engineers spending their time only on the
-> decisions that actually need a person. That is Devin as the engine, not an assistant. Thanks for
-> watching."
+> "So Devin scans and finds the vulnerability, Devin writes and opens the fix, and Devin reviews
+> and merges it. A security backlog that clears itself, with your engineers spending their time
+> only on the decisions that actually need a person. That is Devin as the engine, not an assistant.
+> Thanks for watching."
 
 ---
 
