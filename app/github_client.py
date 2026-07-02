@@ -39,6 +39,29 @@ class GitHubClient:
             page += 1
         return issues
 
+    def issue_state(self, number):
+        """'open' or 'closed' for a single issue - used to self-heal the ledger."""
+        resp = self._http.get(
+            f"{GITHUB_API}/repos/{self.repo}/issues/{number}", timeout=20
+        )
+        resp.raise_for_status()
+        return resp.json().get("state")
+
+    def find_pr_url_for_package(self, package):
+        """Most-recently-updated PR whose title upgrades `package`, if any. Used
+        to backfill a run's PR link when the merge closed the loop out-of-band."""
+        resp = self._http.get(
+            f"{GITHUB_API}/repos/{self.repo}/pulls",
+            params={"state": "all", "per_page": 30, "sort": "updated", "direction": "desc"},
+            timeout=20,
+        )
+        resp.raise_for_status()
+        prefix = f"security: upgrade {package} ".lower()
+        for p in resp.json():
+            if (p.get("title") or "").lower().startswith(prefix):
+                return p.get("html_url")
+        return None
+
     def comment_on_issue(self, issue_number, body):
         resp = self._http.post(
             f"{GITHUB_API}/repos/{self.repo}/issues/{issue_number}/comments",

@@ -287,7 +287,37 @@ class Orchestrator:
                 self._notify_issues(run, new_status, pr_urls[0] if pr_urls else None)
 
             updated.append(run["id"])
+        # Self-heal: a run whose issues are all closed on GitHub is done, even if
+        # its Devin session never reported a terminal status (it may have merged
+        # via the deps-verify gate + auto-merge, or gone idle after opening the PR).
+        updated += self._reconcile_run_ledger()
         return updated
+
+    def _reconcile_run_ledger(self):
+        """Mark still-running runs as `merged` once every issue they close is
+        closed on GitHub, backfilling the PR link. Keeps the dashboard/report
+        honest regardless of how the PR actually landed."""
+        healed = []
+        for run in store.running_runs():
+            nums = run["issue_numbers"]
+            if not nums:
+                continue
+            try:
+                states = [self.gh.issue_state(n) for n in nums]
+            except Exception as exc:  # noqa: BLE001 - transient; try again next poll
+                log.warning("ledger reconcile: issue lookup failed for run %s: %s", run["id"], exc)
+                continue
+            if states and all(s == "closed" for s in states):
+                pr_url = run["pr_url"]
+                if not pr_url:
+                    try:
+                        pr_url = self.gh.find_pr_url_for_package(run["package"])
+                    except Exception:  # noqa: BLE001 - PR link is best-effort
+                        pr_url = None
+                store.update_run(run["id"], status="merged", pr_url=pr_url)
+                log.info("ledger reconcile: run %s (%s) -> merged", run["id"], run["package"])
+                healed.append(run["id"])
+        return healed
 
     def _notify_issues(self, run, status, pr_url):
         if self.dry_run:
