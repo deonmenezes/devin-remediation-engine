@@ -11,14 +11,82 @@ auto-review-and-merge automation then lands it with no human in the loop.
 """
 
 import logging
+import re
 
 from packaging.requirements import Requirement, InvalidRequirement
+from packaging.version import Version, InvalidVersion
 
 from . import config
 
 log = logging.getLogger("checks")
 
 CONTEXT = "deps-verify"
+
+# A changed line in a unified diff that pins a package, e.g. "+urllib3==2.7.1".
+_PIN_RE = re.compile(r"^([+-])\s*([A-Za-z0-9][A-Za-z0-9._-]*)==([0-9][^\s;#]*)", re.M)
+
+
+def _normalize(name):
+    return re.sub(r"[-_.]+", "-", name).lower()
+
+
+def _diff_in_scope(files):
+    """True only if every changed file is a requirements/*.txt - i.e. the PR is a
+    pure dependency bump with no application code, tests, or config touched."""
+    if not files:
+        return False
+    return all(
+        f["filename"].startswith("requirements/") and f["filename"].endswith(".txt")
+        for f in files
+    )
+
+
+def _diff_is_major_bump(files):
+    """True if any pin in the diff moves a package across a major version. Reads
+    old (-) and new (+) pins straight from the patch, so it needs no lookup and
+    catches a major jump regardless of which package the PR title names."""
+    removed, added = {}, {}
+    for f in files:
+        for sign, name, ver in _PIN_RE.findall(f.get("patch") or ""):
+            try:
+                v = Version(ver)
+            except InvalidVersion:
+                continue
+            (removed if sign == "-" else added)[_normalize(name)] = v
+    for key, newv in added.items():
+        oldv = removed.get(key)
+        if oldv is not None and newv.major > oldv.major:
+            return True
+    return False
+
+
+def _try_auto_merge(gh, pr):
+    """Close the loop: squash-merge a green security PR whose diff is in-scope and
+    non-major. Mirrors the Stage-4 Devin automation's rules, but in-engine so the
+    loop never depends on a no-code automation the API can't see. Returns a dict
+    describing the outcome, or None if auto-merge is off."""
+    if not config.ENGINE_AUTO_MERGE:
+        return None
+    files = gh.list_pr_files(pr["number"])
+    if not _diff_in_scope(files):
+        return {"merged": False, "reason": "diff touches files outside requirements/*.txt - left for human"}
+    if _diff_is_major_bump(files):
+        return {"merged": False, "reason": "major version bump - held for human review"}
+    if pr.get("draft") and pr.get("node_id"):
+        try:
+            gh.mark_pr_ready(pr["node_id"])
+        except Exception as exc:  # noqa: BLE001 - best effort
+            log.warning("auto-merge: mark ready failed pr#%s: %s", pr["number"], exc)
+    # No approving review: branch protection here requires no reviews, and a PAT
+    # can't approve a PR it authored, so it would only add a failing round-trip.
+    ok, detail = gh.merge_pr(pr["number"], pr["head"]["sha"])
+    if ok:
+        log.info("auto-merged pr#%s (%s)", pr["number"], pr.get("title"))
+        return {"merged": True, "sha": detail}
+    # A just-posted status can lag GitHub's mergeability recompute; the next 45s
+    # reconcile pass retries. So a transient "not mergeable" here is expected.
+    log.info("auto-merge pr#%s pending: %s", pr["number"], detail)
+    return {"merged": False, "reason": detail}
 
 
 def verify_requirements_text(name, text):
@@ -119,5 +187,17 @@ def reconcile_pr_checks(gh, dry_run):
             log.info("deps-verify=%s pr#%s (%s)", state, pr["number"], description)
         else:
             result["posted"] = False
+
+        # Loop-closer: once green, the engine merges it itself (in-scope, non-major).
+        # Runs every pass while green so a mergeability lag just retries next cycle.
+        if state == "success" and not dry_run:
+            try:
+                merge = _try_auto_merge(gh, pr)
+            except Exception as exc:  # noqa: BLE001 - never let a merge error crash the loop
+                log.warning("auto-merge pr#%s errored: %s", pr.get("number"), exc)
+                merge = {"merged": False, "reason": str(exc)}
+            if merge is not None:
+                result["auto_merge"] = merge
+
         results.append(result)
     return results

@@ -118,8 +118,15 @@ runs `deps-verify` over each open dependency PR:
 `app_id: -1` so the engine's status - not GitHub Actions - satisfies it). This is
 the exact mechanism external CI (CircleCI, Jenkins, Buildkite) uses: a first-class
 commit status gating merges. The upstream cloud-dependent workflows are disabled
-on the fork, so a dependency PR shows one meaningful check - green `deps-verify` -
-and the Stage-4 Devin automation merges it with no human. See
+on the fork, so a dependency PR shows one meaningful check - green `deps-verify`.
+
+**The engine also closes the loop itself.** Once `deps-verify` is green on a
+`security: upgrade` PR whose diff is in-scope (only `requirements/*.txt`) and
+non-major, the reconcile job squash-merges it (`ENGINE_AUTO_MERGE`, on by
+default) - so the full loop is autonomous in code we control, not dependent on
+the no-code Stage-4 Devin automation (which the API can't inspect or toggle).
+That automation stays configured as a belt-and-suspenders backup; whichever
+merges first wins, and the other just sees an already-merged PR. See
 [`DEVIN_AUTOMATIONS.md`](DEVIN_AUTOMATIONS.md) for the automation prompts.
 
 > To use real GitHub-hosted Actions instead, unblock the account's Actions

@@ -31,6 +31,14 @@ RESCAN_INTERVAL_SECONDS = int(os.environ.get("RESCAN_INTERVAL_SECONDS", "180"))
 DISPATCH_ON_STARTUP = _bool("DISPATCH_ON_STARTUP", default=True)
 STARTUP_DISPATCH_DELAY_SECONDS = int(os.environ.get("STARTUP_DISPATCH_DELAY_SECONDS", "8"))
 
+# Close the loop in-engine: once the deps-verify gate is green on a security
+# upgrade PR whose diff is in-scope (only requirements/*.txt) and non-major, the
+# engine squash-merges it itself. This makes the full loop autonomous without
+# depending on the no-code Stage-4 Devin automation (which can't be inspected or
+# toggled via the API). The Devin automation remains a belt-and-suspenders backup
+# - whichever merges first wins; the other simply sees an already-merged PR.
+ENGINE_AUTO_MERGE = _bool("ENGINE_AUTO_MERGE", default=True)
+
 DRY_RUN = _bool("DRY_RUN", default=True)  # default safe: no real sessions, no real PRs
 
 # Where the run ledger lives. Defaults to a repo-local ./data dir so the engine

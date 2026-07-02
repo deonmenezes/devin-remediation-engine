@@ -127,6 +127,23 @@ class GitHubClient:
         resp.raise_for_status()
         return resp.json()
 
+    def merge_pr(self, number, sha, method="squash"):
+        """Squash-merge a PR, pinning to the exact head sha so we never merge a
+        commit we didn't just verify. Returns (ok, detail)."""
+        resp = self._http.put(
+            f"{GITHUB_API}/repos/{self.repo}/pulls/{number}/merge",
+            json={"merge_method": method, "sha": sha},
+            timeout=30,
+        )
+        if resp.status_code == 200:
+            return True, resp.json().get("sha", "")
+        detail = ""
+        try:
+            detail = resp.json().get("message", "")
+        except Exception:  # noqa: BLE001
+            detail = resp.text[:140]
+        return False, f"HTTP {resp.status_code}: {detail}"
+
     def mark_pr_ready(self, node_id):
         """Flip a draft PR to ready-for-review (draft PRs can't be merged)."""
         query = (
