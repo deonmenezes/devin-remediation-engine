@@ -158,11 +158,70 @@ def build_major_bump_comment(group):
     )
 
 
+# Real pins in requirements/base.txt that a demo can safely propose a patch/minor
+# (non-major) bump for, so the dashboard's "Seed demo CVE" button always produces
+# something the loop will actually remediate and auto-merge.
+DEMO_POOL = ["idna", "requests", "cryptography", "markupsafe", "pyyaml", "certifi", "urllib3", "click"]
+
+_PIN_LOOKUP_RE = r"^{name}==([0-9][^\s;#]*)"
+
+
+def _bump_patch(version):
+    """Bump the last numeric segment by one, leaving the major/minor untouched so
+    the result is never a major-version jump (e.g. 3.15 -> 3.16, 48.0.1 -> 48.0.2)."""
+    parts = version.split(".")
+    for i in range(len(parts) - 1, -1, -1):
+        if parts[i].isdigit():
+            parts[i] = str(int(parts[i]) + 1)
+            return ".".join(parts)
+    return version + ".1"
+
+
 class Orchestrator:
     def __init__(self, dry_run=None):
         self.dry_run = config.DRY_RUN if dry_run is None else dry_run
         self.gh = GitHubClient()
         self.devin = DevinClient()
+
+    def seed_demo_issue(self):
+        """File one fresh, fixable, non-major advisory so a reviewer can trigger
+        the full loop themselves. Picks the first pool package that has no run yet
+        and isn't already open, reads its real current pin from master, and files
+        an issue proposing a one-segment bump. Returns what it created (or why not)."""
+        already = store.dispatched_packages()
+        open_pkgs = {g["package"] for g in self.plan()["groups"]}
+        base = self.gh.get_file_at_ref("requirements/base.txt", "master") or ""
+        for pkg in DEMO_POOL:
+            if pkg in already or pkg in open_pkgs:
+                continue
+            match = re.search(_PIN_LOOKUP_RE.format(name=re.escape(pkg)), base, re.IGNORECASE | re.MULTILINE)
+            if not match:
+                continue
+            current = match.group(1)
+            fixed = _bump_patch(current)
+            advisory = f"CVE-DEMO-{pkg}"
+            title = f"[security] {advisory}: upgrade {pkg} {current} -> {fixed}"
+            body = (
+                "## Security advisory (demo)\n\n"
+                f"- **Package:** `{pkg}`\n- **Advisory:** {advisory}\n- **Severity:** `high`\n"
+                f"- **Current version:** `{current}`\n- **Fixed version:** `{fixed}`\n"
+                "- **File:** `requirements/base.txt`\n\n"
+                f"Upgrade `{pkg}` from {current} to {fixed} (patch/minor, non-major). "
+                "Filed by the dashboard's Seed demo CVE button to exercise the loop end to end.\n"
+            )
+            if self.dry_run:
+                return {"created": False, "reason": "dry-run: would file " + title}
+            issue = self.gh.create_issue(title, body, [config.GITHUB_ISSUE_LABEL, "security"])
+            log.info("seeded demo issue #%s for %s %s->%s", issue["number"], pkg, current, fixed)
+            return {
+                "created": True,
+                "number": issue["number"],
+                "url": issue.get("html_url"),
+                "package": pkg,
+                "current": current,
+                "fixed": fixed,
+            }
+        return {"created": False, "reason": "Every demo package already has a run - click Reset to reuse them."}
 
     def plan(self):
         """Read-only: fetch issues, parse, group. No side effects."""

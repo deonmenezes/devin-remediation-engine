@@ -62,6 +62,17 @@ class GitHubClient:
                 return p.get("html_url")
         return None
 
+    def create_issue(self, title, body, labels):
+        """Open a new issue (used by the dashboard's 'Seed demo CVE' button to
+        file a fresh, fixable advisory the same shape the scanner would)."""
+        resp = self._http.post(
+            f"{GITHUB_API}/repos/{self.repo}/issues",
+            json={"title": title, "body": body, "labels": labels},
+            timeout=20,
+        )
+        resp.raise_for_status()
+        return resp.json()
+
     def comment_on_issue(self, issue_number, body):
         resp = self._http.post(
             f"{GITHUB_API}/repos/{self.repo}/issues/{issue_number}/comments",

@@ -213,6 +213,14 @@ def manual_reconcile_checks():
     return {"reconciled": orchestrator.reconcile_checks()}
 
 
+@app.post("/seed-demo")
+def seed_demo():
+    """File a fresh, fixable, non-major advisory issue so a reviewer can trigger
+    the whole loop themselves from the dashboard - no terminal needed. The
+    autonomous rescan (or the Trigger button) then dispatches it to Devin."""
+    return orchestrator.seed_demo_issue()
+
+
 @app.post("/reset")
 def reset():
     """Clear the run ledger so a demo can start from a clean slate."""
