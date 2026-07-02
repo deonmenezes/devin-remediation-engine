@@ -181,13 +181,29 @@ working button:
 | **Generate report** | `GET /report` | Open a shareable executive report (also `/report.md` and `/report.json`) |
 | **Reset** | `POST /reset` | Clear the run ledger so you can demo again from a clean slate |
 
-The page also lists the raw 17 open issues (linked to GitHub, with severity),
-the package groups they collapse into, the live run ledger, and the four Devin
-Automations (linked into the Devin app).
+The page also lists the raw open issues (linked to GitHub, with severity), the
+package groups they collapse into, the live run ledger, and the four Devin
+Automations (linked into the Devin app). An autonomy strip at the top shows the
+loop is self-dispatching and counts down to the next scan.
 
-Other endpoints, for scripting: `GET /healthz`, `GET /plan` (read-only preview),
+Other endpoints, for scripting: `GET /healthz`, `GET /autonomy` (is the loop
+self-running, and when does it scan next), `GET /plan` (read-only preview),
 `GET /status` (JSON), `GET /automations`, `POST /webhook/github` (the real
 webhook target).
+
+### Autonomous mode (no webhook, no clicks)
+
+Out of the box the engine runs itself: a background rescan job re-reads the
+backlog every `RESCAN_INTERVAL_SECONDS` (default 120s) and dispatches any new,
+fixable package group, and `DISPATCH_ON_STARTUP` fires one pass ~8s after boot
+so it acts immediately. So the full path - **issue filed → engine dispatches
+Devin → Devin opens the PR → `deps-verify` goes green → Devin automation merges**
+- closes with no human and no public tunnel. The dashboard's autonomy strip
+shows the loop is live and counts down to the next scan; `GET /autonomy`
+exposes the same state as JSON. Set `RESCAN_INTERVAL_SECONDS=0` to revert to
+webhook/manual-only dispatch. Safety caps still apply: `DISPATCH_LIMIT_PER_RUN`
+per pass, `MAX_ACU_PER_SESSION` per session, major bumps and no-fix packages
+held automatically.
 
 ### Wiring a real GitHub webhook
 
@@ -198,11 +214,10 @@ or a deployed instance) and set the same `GITHUB_WEBHOOK_SECRET` on both sides.
 
 ### Working through the existing issue backlog
 
-The 17 seed issues in `deonmenezes/superset` were filed by a scheduled scan
-*before* this service's webhook existed, so nothing will retroactively fire
-for them. `POST /trigger` (or the periodic re-scan if `RESCAN_INTERVAL_SECONDS`
-is set) is what picks up that backlog - it doesn't care whether a package's
-issues are old or new, only whether that package has already been dispatched.
+Seed issues filed by a scheduled scan *before* this service existed won't
+retroactively fire a webhook. The autonomous rescan (on by default) picks up
+that backlog on its next pass regardless of issue age - it only cares whether a
+package has already been dispatched. `POST /trigger` does the same on demand.
 
 ## Observability
 

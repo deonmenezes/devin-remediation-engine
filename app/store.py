@@ -9,9 +9,28 @@ from . import config
 _lock = threading.Lock()
 
 
+def _resolve_db_path():
+    """The configured DB path if its directory is usable, else a repo-local
+    ./data/runs.db fallback. Keeps the engine running the same in Docker (where
+    /data is a mounted volume) and locally (where it usually isn't)."""
+    configured = config.DB_PATH
+    directory = os.path.dirname(configured) or "."
+    try:
+        os.makedirs(directory, exist_ok=True)
+        if os.access(directory, os.W_OK):
+            return configured
+    except OSError:
+        pass
+    fallback_dir = os.path.join(os.getcwd(), "data")
+    os.makedirs(fallback_dir, exist_ok=True)
+    return os.path.join(fallback_dir, "runs.db")
+
+
+_DB_PATH = _resolve_db_path()
+
+
 def _connect():
-    os.makedirs(os.path.dirname(config.DB_PATH) or ".", exist_ok=True)
-    conn = sqlite3.connect(config.DB_PATH)
+    conn = sqlite3.connect(_DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 

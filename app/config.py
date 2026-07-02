@@ -20,11 +20,29 @@ GITHUB_WEBHOOK_SECRET = os.environ.get("GITHUB_WEBHOOK_SECRET", "")
 DISPATCH_LIMIT_PER_RUN = int(os.environ.get("DISPATCH_LIMIT_PER_RUN", "3"))
 MAX_ACU_PER_SESSION = int(os.environ.get("MAX_ACU_PER_SESSION", "15"))
 POLL_INTERVAL_SECONDS = int(os.environ.get("POLL_INTERVAL_SECONDS", "30"))
-RESCAN_INTERVAL_SECONDS = int(os.environ.get("RESCAN_INTERVAL_SECONDS", "0"))  # 0 = disabled
+
+# Autonomy: how often the engine re-scans the backlog and dispatches new work on
+# its own, with no webhook and no button click. This is what makes the loop
+# hands-free - a newly-filed issue gets picked up within one interval. 0 disables
+# it (back to webhook/manual-only). Default 180s so a fresh install is autonomous.
+RESCAN_INTERVAL_SECONDS = int(os.environ.get("RESCAN_INTERVAL_SECONDS", "180"))
+# Run one dispatch pass shortly after startup so the engine acts immediately on
+# boot instead of waiting a full interval. Only meaningful outside dry-run.
+DISPATCH_ON_STARTUP = _bool("DISPATCH_ON_STARTUP", default=True)
+STARTUP_DISPATCH_DELAY_SECONDS = int(os.environ.get("STARTUP_DISPATCH_DELAY_SECONDS", "8"))
 
 DRY_RUN = _bool("DRY_RUN", default=True)  # default safe: no real sessions, no real PRs
 
-DB_PATH = os.environ.get("DB_PATH", "/data/runs.db")
+# Where the run ledger lives. Defaults to a repo-local ./data dir so the engine
+# runs the same locally as in Docker; the Docker image / .env override it to the
+# /data volume. store.py degrades to ./data if the configured dir isn't writable.
+DB_PATH = os.environ.get("DB_PATH", os.path.join(os.getcwd(), "data", "runs.db"))
+
+
+def autonomous():
+    """True when the engine dispatches new work on its own (not dry-run and the
+    rescan loop is enabled). This is the headline the dashboard reports."""
+    return not DRY_RUN and RESCAN_INTERVAL_SECONDS > 0
 
 PORT = int(os.environ.get("PORT", "8000"))
 

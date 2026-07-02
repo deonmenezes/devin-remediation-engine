@@ -2,6 +2,8 @@ import hashlib
 import hmac
 import json
 import logging
+import time
+from datetime import datetime, timedelta, timezone
 
 import requests
 from fastapi import FastAPI, Request, HTTPException, Query
@@ -23,6 +25,27 @@ templates = Jinja2Templates(directory="app/templates")
 store.init_db()
 orchestrator = Orchestrator()
 
+# In-memory record of the last autonomous dispatch, surfaced by /autonomy so the
+# dashboard can show "the engine is running itself" rather than sitting idle.
+_last_dispatch = {"at": None, "trigger": None, "dispatched": []}
+
+
+def _autonomous_dispatch(trigger):
+    """Run a dispatch pass and remember when/what, for the autonomy panel."""
+    try:
+        dispatched = orchestrator.dispatch()
+    except Exception as exc:  # noqa: BLE001 - a transient API error must not kill the loop
+        log.warning("autonomous dispatch (%s) failed: %s", trigger, exc)
+        return
+    _last_dispatch["at"] = time.time()
+    _last_dispatch["trigger"] = trigger
+    _last_dispatch["dispatched"] = [
+        {"package": d["package"], "status": d["status"]} for d in dispatched
+    ]
+    if dispatched:
+        log.info("autonomous dispatch (%s) handled %d package(s)", trigger, len(dispatched))
+
+
 _scheduler = BackgroundScheduler()
 _scheduler.add_job(lambda: orchestrator.poll_running(), "interval", seconds=config.POLL_INTERVAL_SECONDS, id="poll")
 # The deps-verify merge gate: the engine is the CI on this billing-blocked
@@ -33,14 +56,34 @@ _scheduler.add_job(
     seconds=config.POLL_INTERVAL_SECONDS,
     id="reconcile_checks",
 )
+# Autonomy: re-scan the backlog and self-dispatch on a timer, so a newly-filed
+# issue is picked up with no webhook and no button click.
 if config.RESCAN_INTERVAL_SECONDS > 0:
     _scheduler.add_job(
-        lambda: orchestrator.dispatch(),
+        lambda: _autonomous_dispatch("rescan"),
         "interval",
         seconds=config.RESCAN_INTERVAL_SECONDS,
         id="rescan",
     )
+    # Act immediately on boot instead of waiting a full interval.
+    if config.DISPATCH_ON_STARTUP and not config.DRY_RUN:
+        _scheduler.add_job(
+            lambda: _autonomous_dispatch("startup"),
+            "date",
+            run_date=datetime.now() + timedelta(seconds=config.STARTUP_DISPATCH_DELAY_SECONDS),
+            id="startup_dispatch",
+        )
 _scheduler.start()
+
+
+def _next_rescan_epoch():
+    """When the rescan job is scheduled to fire next, as a unix timestamp."""
+    if config.RESCAN_INTERVAL_SECONDS <= 0:
+        return None
+    job = _scheduler.get_job("rescan")
+    if job and job.next_run_time:
+        return job.next_run_time.timestamp()
+    return None
 
 
 def _verify_signature(secret: str, body: bytes, signature_header: str) -> bool:
@@ -59,7 +102,33 @@ def root():
 @app.get("/healthz")
 def healthz():
     missing = config.missing_required()
-    return {"ok": not missing, "dry_run": config.DRY_RUN, "missing_env": missing}
+    return {
+        "ok": not missing,
+        "dry_run": config.DRY_RUN,
+        "autonomous": config.autonomous(),
+        "missing_env": missing,
+    }
+
+
+@app.get("/autonomy")
+def autonomy():
+    """Live view of the self-running loop: whether the engine dispatches on its
+    own, how often, when the next scan fires, and what the last one did. The
+    dashboard polls this to prove the loop is hands-free."""
+    next_epoch = _next_rescan_epoch()
+    now = time.time()
+    return {
+        "autonomous": config.autonomous(),
+        "dry_run": config.DRY_RUN,
+        "rescan_interval_seconds": config.RESCAN_INTERVAL_SECONDS,
+        "poll_interval_seconds": config.POLL_INTERVAL_SECONDS,
+        "dispatch_limit_per_run": config.DISPATCH_LIMIT_PER_RUN,
+        "max_acu_per_session": config.MAX_ACU_PER_SESSION,
+        "next_rescan_epoch": next_epoch,
+        "next_rescan_in_seconds": round(next_epoch - now) if next_epoch else None,
+        "last_dispatch": _last_dispatch,
+        "server_epoch": now,
+    }
 
 
 @app.post("/webhook/github")
@@ -229,6 +298,8 @@ def dashboard(request: Request):
             "runs": store.all_runs(),
             "plan": orchestrator.plan(),
             "dry_run": config.DRY_RUN,
+            "autonomous": config.autonomous(),
+            "rescan_interval": config.RESCAN_INTERVAL_SECONDS,
             "default_limit": config.DISPATCH_LIMIT_PER_RUN,
             "automations": config.AUTOMATIONS,
             "repo": config.GITHUB_REPO,
